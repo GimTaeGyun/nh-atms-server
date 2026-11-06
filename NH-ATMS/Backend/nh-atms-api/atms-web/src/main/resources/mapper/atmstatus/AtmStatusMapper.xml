@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.nh.atms.web.atmstatus.mapper.AtmStatusMapper">
+
+    <resultMap id="rm" type="kr.co.nh.atms.web.atmstatus.entity.AtmStatus" autoMapping="true"/>
+
+    <sql id="cols">
+        TERM_GROUP_ID, TERM_ID, SERVICE_STATUS, INIT_DATE, INIT_TIME,
+        ATM_FAULT_STATUS, OP_FAULT_STATUS, ERR_GROUP_CD, ERR_CD,
+        ATM_SESSION_STATUS, FAULT_ARISED_DATE, FAULT_ARISED_TIME,
+        SVR_RECEIVE_DATE, SVR_RECEIVE_TIME, REMAIN_AMOUNT, CHECK_AMOUNT,
+        CDU_STATUS, MAN_STATUS, OMAN_STATUS, CHK_STATUS, MCR_STATUS,
+        SPR_STATUS, JPR_STATUS, RJT_STATUS,
+        LAST_TR_DATE, LAST_TR_TIME, LAST_ADD_CASH_DATE, LAST_ADD_CASH_TIME,
+        LAST_DAY_TOTAL_DATE, LAST_DAY_TOTAL_TIME, STATUS,
+        LAST_OUT_CALL_DATE, LAST_OUT_CALL_TIME, LAST_OUT_SNO, FAULT_CLASS_CD,
+        LAST_ATM_CALL_DATE, LAST_ATM_CALL_TIME, LAST_ATM_FAULT_CLASS_CD, LAST_ATM_SNO,
+        LAST_KEY_CALL_DATE, LAST_KEY_CALL_TIME, LAST_KEY_FAULT_CLASS_CD, LAST_KEY_SNO
+    </sql>
+
+    <sql id="where">
+        <where>
+            <if test="termGroupId != null and termGroupId != ''">AND TERM_GROUP_ID = #{termGroupId}</if>
+            <if test="termId != null and termId != ''">AND TERM_ID = #{termId}</if>
+            <if test="serviceStatus != null and serviceStatus != ''">AND SERVICE_STATUS = #{serviceStatus}</if>
+            <if test="atmFaultStatus != null and atmFaultStatus != ''">AND ATM_FAULT_STATUS = #{atmFaultStatus}</if>
+            <if test="errGroupCd != null and errGroupCd != ''">AND ERR_GROUP_CD = #{errGroupCd}</if>
+        </where>
+    </sql>
+
+    <select id="selectList" resultMap="rm">
+        SELECT <include refid="cols"/> FROM T_ATM_STATUS
+        <include refid="where"/>
+        ORDER BY TERM_GROUP_ID, TERM_ID
+        OFFSET #{offset} ROWS FETCH NEXT #{limit} ROWS ONLY
+    </select>
+
+    <select id="countList" resultType="long">SELECT COUNT(*) FROM T_ATM_STATUS <include refid="where"/></select>
+
+    <select id="selectOne" resultMap="rm">
+        SELECT <include refid="cols"/> FROM T_ATM_STATUS
+        WHERE TERM_GROUP_ID = #{termGroupId} AND TERM_ID = #{termId}
+    </select>
+
+    <update id="upsert" parameterType="kr.co.nh.atms.web.atmstatus.entity.AtmStatus">
+        MERGE INTO T_ATM_STATUS T USING DUAL ON
+            (T.TERM_GROUP_ID = #{termGroupId} AND T.TERM_ID = #{termId})
+        WHEN MATCHED THEN UPDATE SET
+            SERVICE_STATUS = #{serviceStatus},
+            ATM_FAULT_STATUS = #{atmFaultStatus},
+            OP_FAULT_STATUS = #{opFaultStatus},
+            ERR_GROUP_CD = #{errGroupCd},
+            ERR_CD = #{errCd},
+            FAULT_ARISED_DATE = #{faultArisedDate},
+            FAULT_ARISED_TIME = #{faultArisedTime},
+            SVR_RECEIVE_DATE = TO_CHAR(SYSDATE, 'YYYYMMDD'),
+            SVR_RECEIVE_TIME = TO_CHAR(SYSDATE, 'HH24MISS'),
+            REMAIN_AMOUNT = #{remainAmount},
+            CHECK_AMOUNT = #{checkAmount}
+        WHEN NOT MATCHED THEN INSERT
+            (TERM_GROUP_ID, TERM_ID, SERVICE_STATUS, ATM_FAULT_STATUS,
+             OP_FAULT_STATUS, ERR_GROUP_CD, ERR_CD,
+             SVR_RECEIVE_DATE, SVR_RECEIVE_TIME, REMAIN_AMOUNT, CHECK_AMOUNT)
+        VALUES
+            (#{termGroupId}, #{termId}, #{serviceStatus}, #{atmFaultStatus},
+             #{opFaultStatus}, #{errGroupCd}, #{errCd},
+             TO_CHAR(SYSDATE, 'YYYYMMDD'), TO_CHAR(SYSDATE, 'HH24MISS'),
+             #{remainAmount}, #{checkAmount})
+    </update>
+
+</mapper>

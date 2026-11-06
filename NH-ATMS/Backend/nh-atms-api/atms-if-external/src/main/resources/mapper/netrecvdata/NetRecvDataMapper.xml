@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.nh.atms.ifex.mapper.NetRecvDataMapper">
+
+    <insert id="insert" parameterType="kr.co.nh.atms.ifex.entity.NetRecvData">
+        <selectKey keyProperty="recvSeq" resultType="long" order="BEFORE">
+            SELECT SEQ_T_NET_RECV_DATA.NEXTVAL FROM DUAL
+        </selectKey>
+        INSERT INTO T_NET_RECV_DATA
+            (RECV_SEQ, GLOBAL_ID, TR_CODE, SEND_SEQ, RECV_MSG,
+             RESULT_CD, RESULT_MSG, RECV_DATE, RECV_TIME,
+             PROVIDER_CD, ATMS_SN, VEND_SN, RAW_MSG, REG_DT)
+        VALUES
+            (#{recvSeq}, #{globalId}, #{trCode}, #{sendSeq}, #{recvMsg},
+             #{resultCd}, #{resultMsg}, #{recvDate}, #{recvTime},
+             #{providerCd}, #{atmsSn}, #{vendSn}, #{rawMsg}, CURRENT_TIMESTAMP)
+    </insert>
+
+</mapper>

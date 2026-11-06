@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.nh.atms.journal.mapper.ApVersionMapper">
+
+    <resultMap id="ApDeployInfoRM" type="kr.co.nh.atms.journal.dto.ApDeployInfo">
+        <result property="lastDownVer" column="LAST_DOWN_VER"/>
+        <result property="filePath"    column="FILE_PATH"/>
+        <result property="fileSize"    column="FILE_SIZE"/>
+        <result property="downPath"    column="DOWN_PATH"/>
+    </resultMap>
+
+    <!-- 에이전트 open 시 AP 배포버전 조회 (atmr AgentMapper.selectApLastVersion 이식, Oracle 문법)
+         - 승인(CONFIRM_STEP='1') 버전이면 동일 버전 배포본
+         - 미승인이면 승인버전 직전 배포본
+         DOWN_PATH 는 기기측 저장경로(Windows) — AS-IS 와 동일하게 '\' 로 결합 -->
+    <select id="selectApLastVersion" resultMap="ApDeployInfoRM">
+        SELECT d.LAST_DOWN_VER                                        AS LAST_DOWN_VER
+             , TRIM(d.FILE_PATH)                                      AS FILE_PATH
+             , d.FILE_SIZE                                            AS FILE_SIZE
+             , TRIM(v.FILE_PATH) || '\' || TRIM(v.FILE_NAME)          AS DOWN_PATH
+          FROM T_DOWNLOAD_SERVER d
+          LEFT JOIN T_AP_LAST_VERSION v
+            ON d.ATM_CO_CD = v.ATM_CO_CD
+           AND d.MODEL_CD  = v.MODEL_CD
+          JOIN T_ATM a
+            ON d.ATM_CO_CD = a.ATM_CO_CD
+           AND d.MODEL_CD  = a.MODEL_CD
+           AND a.TERM_GROUP_ID = #{termGroupId,jdbcType=CHAR}
+           AND a.TERM_ID       = #{termId,jdbcType=VARCHAR}
+         WHERE (
+                    v.CONFIRM_STEP  = '1'
+                AND v.LAST_DOWN_VER = d.LAST_DOWN_VER
+               )
+            OR (
+                    v.CONFIRM_STEP != '1'
+                AND d.LAST_DOWN_VER = (
+                        SELECT MAX(LAST_DOWN_VER)
+                          FROM T_DOWNLOAD_SERVER
+                         WHERE ATM_CO_CD = v.ATM_CO_CD
+                           AND LAST_DOWN_VER <![CDATA[ < ]]> v.LAST_DOWN_VER
+                    )
+               )
+         FETCH FIRST 1 ROWS ONLY
+    </select>
+
+</mapper>

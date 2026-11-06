@@ -1,0 +1,34 @@
+-- =====================================================================
+-- V1.0.9 : 운영저널 (jnl_kind = 52) 전용 테이블
+--   - 새마을금고 oracle19c_ddl.sql 원본 정의 그대로 채용
+--   - 향후 부하 증가 시 JNL_DATE 기준 INTERVAL 파티션 권장
+-- =====================================================================
+
+-- 1) T_OPERATION_JOURNAL ---------------------------------------------------
+CREATE TABLE T_OPERATION_JOURNAL (
+    TERM_GROUP_ID    CHAR(5)        NOT NULL,
+    TERM_ID          VARCHAR2(20)   NOT NULL,
+    JNL_DATE         CHAR(8)        NOT NULL,
+    JNL_TIME         CHAR(10)       NOT NULL,
+    OPERATION_CD     CHAR(2)        NOT NULL,
+    OPERATION_ACTION VARCHAR2(255)  DEFAULT NULL,
+    CONSTRAINT PK_T_OPERATION_JOURNAL PRIMARY KEY
+        (TERM_GROUP_ID, TERM_ID, JNL_DATE, JNL_TIME)
+);
+
+CREATE INDEX IX_T_OPERATION_JOURNAL_DATE ON T_OPERATION_JOURNAL(JNL_DATE);
+
+COMMENT ON TABLE  T_OPERATION_JOURNAL                  IS 'T_운영저널정보';
+COMMENT ON COLUMN T_OPERATION_JOURNAL.TERM_GROUP_ID    IS '영업점코드';
+COMMENT ON COLUMN T_OPERATION_JOURNAL.TERM_ID          IS '단말번호';
+COMMENT ON COLUMN T_OPERATION_JOURNAL.JNL_DATE         IS '저널발생일';
+COMMENT ON COLUMN T_OPERATION_JOURNAL.JNL_TIME         IS '저널발생시간';
+COMMENT ON COLUMN T_OPERATION_JOURNAL.OPERATION_CD     IS '운영코드 (11=시작/12=종료/21=POWER ON/22=POWER OFF/31=상태전환/99=기타)';
+COMMENT ON COLUMN T_OPERATION_JOURNAL.OPERATION_ACTION IS '처리내용 (가공된 한글 라벨)';
+
+-- TODO[PARTITION]: 5000대 ATM × 평균 12 TPS / 피크 300 TPS 환경에서
+--   JNL_DATE 기준 월별 INTERVAL 파티션 권장.
+-- ALTER TABLE T_OPERATION_JOURNAL MODIFY
+--   PARTITION BY RANGE (JNL_DATE)
+--   INTERVAL (NUMTOYMINTERVAL(1,'MONTH'))
+--   ( PARTITION P_INIT VALUES LESS THAN ('202601') );

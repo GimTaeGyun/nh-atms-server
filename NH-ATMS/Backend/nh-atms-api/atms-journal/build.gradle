@@ -1,0 +1,22 @@
+// atms-journal : 전자저널 / 원격명령 (구 atmr)
+plugins {
+    id 'org.springframework.boot'
+    id 'io.spring.dependency-management'
+}
+
+dependencies {
+    implementation project(':atms-common')
+
+    // 저널 스트리밍: Kafka 발행/소비 + Elasticsearch 색인 (atms.stream.* 플래그로 on/off)
+    implementation 'org.springframework.kafka:spring-kafka'
+    implementation 'org.springframework.boot:spring-boot-starter-data-elasticsearch'
+
+    // 레거시 agent 바이너리 저널(JIF) 변환 — AS-IS Converter 포팅분이 Gson 기반
+    implementation 'com.google.code.gson:gson'
+}
+
+test {
+    useJUnitPlatform()
+    systemProperty 'file.encoding', 'UTF-8'
+    jvmArgs '-Dfile.encoding=UTF-8', '-Dsun.jnu.encoding=UTF-8'
+}

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.nh.atms.journal.mapper.AtmMonitorWriteMapper">
+
+    <insert id="insert" parameterType="kr.co.nh.atms.journal.entity.AtmMonitor">
+        INSERT /*+ IGNORE_ROW_ON_DUPKEY_INDEX(T_ATM_MONITOR, PK_T_ATM_MONITOR) */ INTO T_ATM_MONITOR (
+            TERM_GROUP_ID, TERM_ID, JNL_DATE, JNL_TIME, AGENT_TYPE,
+            ATM_STATUS, ERR_CD, ATM_ERR_CD, PROCESS_COUNT,
+            MAN_STATUS, OMAN_STATUS, SPR_STATUS, JPR_STATUS, CHK_STATUS, CHA_STATUS,
+            MCR_STATUS, PB_STATUS, RJT_STATUS,
+            SEND_FLAG, RECV_DATE, RECV_TIME
+        ) VALUES (
+            #{termGroupId,jdbcType=CHAR},  #{termId,jdbcType=VARCHAR},
+            #{jnlDate,jdbcType=CHAR},      #{jnlTime,jdbcType=CHAR},
+            #{agentType,jdbcType=CHAR},
+            #{atmStatus,jdbcType=CHAR},    #{errCd,jdbcType=VARCHAR},
+            #{atmErrCd,jdbcType=VARCHAR},  #{processCount,jdbcType=CHAR},
+            #{manStatus,jdbcType=CHAR},    #{omanStatus,jdbcType=CHAR},
+            #{sprStatus,jdbcType=CHAR},    #{jprStatus,jdbcType=CHAR},
+            #{chkStatus,jdbcType=CHAR},    #{chaStatus,jdbcType=CHAR},
+            #{mcrStatus,jdbcType=CHAR},    #{pbStatus,jdbcType=CHAR},
+            #{rjtStatus,jdbcType=CHAR},
+            #{sendFlag,jdbcType=CHAR},
+            #{recvDate,jdbcType=CHAR},     #{recvTime,jdbcType=CHAR}
+        )
+    </insert>
+
+</mapper>

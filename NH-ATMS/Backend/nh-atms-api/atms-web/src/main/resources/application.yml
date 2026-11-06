@@ -1,0 +1,126 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /
+
+spring:
+  application:
+    name: atms-web
+  profiles:
+    active: local
+    # local  → 로컬 IntelliJ 기본값 (application-local.yml 함께 로드)
+    # dev    → Docker Compose: SPRING_PROFILES_ACTIVE=dev 환경변수가 이 값을 덮어씀
+    # prod   → CI/CD 배포 시 Jenkins Credentials에서 주입
+
+  # Oracle 19C
+  # 접속 정보는 환경변수로 주입 (로컬: .env, Docker: docker-compose, CI: Jenkins Credentials)
+  datasource:
+    url:      ${SPRING_DATASOURCE_URL:jdbc:oracle:thin:@//192.168.28.21:1521/ATMSPDB}
+    driver-class-name: oracle.jdbc.OracleDriver
+    username: ${SPRING_DATASOURCE_USERNAME:ATMS}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    # password 기본값 없음 → 환경변수 미설정 시 앱 구동 실패 (의도적 안전장치)
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 30000
+      pool-name: AtmsHikariCP
+      # Oracle Docker 컨테이너가 UTC로 실행되어 CURRENT_TIMESTAMP가 KST를 반환하도록 강제
+      connection-init-sql: "ALTER SESSION SET TIME_ZONE = 'Asia/Seoul'"
+
+  # 개별다운로드 AP/일반 ZIP 업로드 대비 멀티파트 한도 상향
+  servlet:
+    multipart:
+      max-file-size: 200MB
+      max-request-size: 220MB
+
+mybatis:
+  mapper-locations: classpath:mapper/**/*.xml
+  type-aliases-package: kr.co.nh.atms.web
+  configuration:
+    map-underscore-to-camel-case: true
+    default-fetch-size: 100
+    jdbc-type-for-null: VARCHAR
+
+jwt:
+  secret: ${JWT_SECRET}
+  # 기본값 없음 → 환경변수 미설정 시 앱 구동 실패 (의도적 안전장치)
+  access-token-validity: 3600000
+  refresh-token-validity: 86400000
+
+logging:
+  level:
+    kr.co.nh.atms: DEBUG
+    org.springframework.security: INFO
+    p6spy: INFO
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+notice:
+  upload-dir: ${NOTICE_UPLOAD_DIR:./uploads/notice}
+
+# 개별다운로드 업로드 파일 저장소
+# 에이전트가 다운로드받을 수 있도록 atms-file(파일 서버)이 노출하는 경로와 동일 볼륨이어야 함
+download:
+  storage:
+    base-dir: ${DOWNLOAD_STORAGE_DIR:./data/atms-download}
+
+sso:
+  provider: local
+  # provider: nh
+
+# ── CORS 허용 Origin ─────────────────────────────────────────────────
+# 로컬 기본값: Vite 개발서버(5173) + CRA 개발서버(3000)
+# 서버 배포 시: docker-compose.yml의 CORS_ALLOWED_ORIGINS 환경변수가 이 값을 덮어씀
+#   예) CORS_ALLOWED_ORIGINS=http://192.168.28.21:19080
+cors:
+  allowed-origins: "http://localhost:3000,http://localhost:5173"
+
+# 부팅 시 관리자 계정 자동 보정 (admin 비밀번호 = admin1234!)
+init:
+  admin:
+    reset-password: true
+    user-id: admin
+    raw-password: "admin1234!"
+
+# ── Actuator (헬스체크 / 메트릭) ─────────────────────────────────────
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: never
+
+---
+# ── 로컬(bootRun, 내장 톰캣) 전용: 모듈 게이트웨이 ─────────────────────
+# JEUS 와 같은 경로 구조로 동작하도록, 8080 으로 들어온 다른 모듈의 고정 경로를
+# 각 모듈 포트로 그대로 전달한다 (JEUS 는 application-jeus.yml 의 같은 설정이 컨텍스트로 전달).
+#   화면 /api/file, /api/batch · 에이전트 /api/agent, /api/journal, /atmf · 대외기관 /api/if/*
+# 대상 모듈이 떠 있지 않으면 해당 경로만 502. 끄려면 GATEWAY_ENABLED=false.
+# Docker Compose(SPRING_PROFILES_ACTIVE=dev)는 이 문서가 적용되지 않는다 (nginx 가 라우팅).
+spring:
+  config:
+    activate:
+      on-profile: local
+
+gateway:
+  enabled: ${GATEWAY_ENABLED:true}
+  routes:
+    - prefix: /api/agent
+      target: ${ATMS_JOURNAL_URL:http://localhost:8081}
+    - prefix: /api/journal
+      target: ${ATMS_JOURNAL_URL:http://localhost:8081}
+    - prefix: /api/batch
+      target: ${ATMS_BATCH_URL:http://localhost:8082}
+    - prefix: /api/file
+      target: ${ATMS_FILE_URL:http://localhost:8083}
+    - prefix: /atmf
+      target: ${ATMS_FILE_URL:http://localhost:8083}
+    - prefix: /api/if/internal
+      target: ${ATMS_IF_INTERNAL_URL:http://localhost:8084}
+    - prefix: /api/if/external
+      target: ${ATMS_IF_EXTERNAL_URL:http://localhost:8085}

@@ -1,0 +1,45 @@
+-- =====================================================================
+-- T_BATCH_JOB 시드 : AS-IS(새마을금고 atmb) t_atms_batch 크론 이관
+--
+-- 크론 출처 : atmb batdayNN Task 헤더 주석([HH mm ss] Spring 6필드 크론)
+--   batday01 = 00 00 01 * * ?   장애율/가동률 집계
+--   batday02 = 00 05 01 * * ?   거래실적 집계(시간대별)
+--   batday08 = 00 15 03 * * ?   장애/거래 보고서 집계
+--   batday09 = 00 20 01 * * ?   일별 기기 이력정보
+--   batday30 = 00 05 00 * * ?   금고(부서)명 동기화
+--   batday98 = 00 55 00 * * ?   테이블 데이터 정리
+--   batday99 = 00 50 23 * * ?   파일 정리
+--
+-- USE_FLAG='Y' 등록 시 DynamicBatchScheduler 가 기동 시점에 자동 스케줄링한다.
+-- 멱등(MERGE) — 이미 등록된 PROC_NAME 은 건드리지 않는다.
+-- =====================================================================
+
+MERGE INTO T_BATCH_JOB t USING (SELECT 'batday01' PROC_NAME FROM DUAL) s ON (t.PROC_NAME = s.PROC_NAME)
+WHEN NOT MATCHED THEN INSERT (PROC_NAME, JOB_DESC, CRON_EXPR, HOST_NAME, JOB_STATUS, USE_FLAG, SORT_ORDER, REG_DT, UPD_DT)
+VALUES ('batday01', '장애율/가동률 집계(일배치)', '00 00 01 * * ?', NULL, 'IDLE', 'Y', 10, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+
+MERGE INTO T_BATCH_JOB t USING (SELECT 'batday02' PROC_NAME FROM DUAL) s ON (t.PROC_NAME = s.PROC_NAME)
+WHEN NOT MATCHED THEN INSERT (PROC_NAME, JOB_DESC, CRON_EXPR, HOST_NAME, JOB_STATUS, USE_FLAG, SORT_ORDER, REG_DT, UPD_DT)
+VALUES ('batday02', '거래실적 집계 - 시간대별(일배치)', '00 05 01 * * ?', NULL, 'IDLE', 'Y', 20, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+
+MERGE INTO T_BATCH_JOB t USING (SELECT 'batday08' PROC_NAME FROM DUAL) s ON (t.PROC_NAME = s.PROC_NAME)
+WHEN NOT MATCHED THEN INSERT (PROC_NAME, JOB_DESC, CRON_EXPR, HOST_NAME, JOB_STATUS, USE_FLAG, SORT_ORDER, REG_DT, UPD_DT)
+VALUES ('batday08', '장애/거래 보고서 집계(일배치)', '00 15 03 * * ?', NULL, 'IDLE', 'Y', 30, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+
+MERGE INTO T_BATCH_JOB t USING (SELECT 'batday09' PROC_NAME FROM DUAL) s ON (t.PROC_NAME = s.PROC_NAME)
+WHEN NOT MATCHED THEN INSERT (PROC_NAME, JOB_DESC, CRON_EXPR, HOST_NAME, JOB_STATUS, USE_FLAG, SORT_ORDER, REG_DT, UPD_DT)
+VALUES ('batday09', '일별 기기 이력정보(일배치)', '00 20 01 * * ?', NULL, 'IDLE', 'Y', 40, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+
+MERGE INTO T_BATCH_JOB t USING (SELECT 'batday30' PROC_NAME FROM DUAL) s ON (t.PROC_NAME = s.PROC_NAME)
+WHEN NOT MATCHED THEN INSERT (PROC_NAME, JOB_DESC, CRON_EXPR, HOST_NAME, JOB_STATUS, USE_FLAG, SORT_ORDER, REG_DT, UPD_DT)
+VALUES ('batday30', '사용자 부서(금고)명 동기화(일배치)', '00 05 00 * * ?', NULL, 'IDLE', 'Y', 50, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+
+MERGE INTO T_BATCH_JOB t USING (SELECT 'batday98' PROC_NAME FROM DUAL) s ON (t.PROC_NAME = s.PROC_NAME)
+WHEN NOT MATCHED THEN INSERT (PROC_NAME, JOB_DESC, CRON_EXPR, HOST_NAME, JOB_STATUS, USE_FLAG, SORT_ORDER, REG_DT, UPD_DT)
+VALUES ('batday98', '테이블 데이터 정리(일배치)', '00 55 00 * * ?', NULL, 'IDLE', 'Y', 90, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+
+MERGE INTO T_BATCH_JOB t USING (SELECT 'batday99' PROC_NAME FROM DUAL) s ON (t.PROC_NAME = s.PROC_NAME)
+WHEN NOT MATCHED THEN INSERT (PROC_NAME, JOB_DESC, CRON_EXPR, HOST_NAME, JOB_STATUS, USE_FLAG, SORT_ORDER, REG_DT, UPD_DT)
+VALUES ('batday99', '파일 정리(일배치)', '00 50 23 * * ?', NULL, 'IDLE', 'Y', 99, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+
+COMMIT;

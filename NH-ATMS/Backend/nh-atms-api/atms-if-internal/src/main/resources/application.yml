@@ -1,0 +1,68 @@
+server:
+  port: 8084
+
+spring:
+  application:
+    name: atms-if-internal
+  profiles:
+    active: local
+    # local  → 로컬 IntelliJ 기본값 (application-local.yml 함께 로드)
+    # dev    → Docker Compose: SPRING_PROFILES_ACTIVE=dev 환경변수가 이 값을 덮어씀
+    # prod   → CI/CD 배포 시 Jenkins Credentials에서 주입
+  # Oracle 19C — atms-web 과 동일 DB 공유
+  datasource:
+    url:      ${SPRING_DATASOURCE_URL:jdbc:oracle:thin:@//192.168.28.21:1521/ATMSPDB}
+    driver-class-name: oracle.jdbc.OracleDriver
+    username: ${SPRING_DATASOURCE_USERNAME:ATMS}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 1
+      connection-timeout: 30000
+      pool-name: AtmsIfIntHikariCP
+      connection-init-sql: "ALTER SESSION SET TIME_ZONE = 'Asia/Seoul'"
+
+mybatis:
+  mapper-locations: classpath:mapper/**/*.xml
+  # entity 패키지로 한정 — 패키지 전체 스캔 시 Converter의 메서드 로컬 클래스(Converter$1Convert, $2Convert)가
+  # 동일 별칭 'Convert'로 중복 등록되어 SqlSessionFactory 생성 실패(기동 불가). mapper XML은 FQCN만 사용하므로 영향 없음.
+  type-aliases-package: kr.co.nh.atms.ifin.entity
+  configuration:
+    map-underscore-to-camel-case: true
+
+# 대내(EAI) 게이트웨이 설정
+internal:
+  gateway:
+    # mock : 더미 응답 (기본) / eai : 은행 EAI TCP 실연동 (EaiInternalGateway 활성화)
+    mode: ${INTERNAL_GATEWAY_MODE:mock}
+    eai:
+      ip: ${EAI_IP:127.0.0.1}          # 구 config.json eai.ip - NH EAI 규격 확정 시 변경
+      port: ${EAI_PORT:39021}          # 구 config.json eai.port
+      send-worker: 1                   # 구 eai.send.worker
+      keep-connect: true               # 구 eai.send.keep-connect (상시연결)
+      connect-timeout-ms: 2500
+      read-timeout-ms: 30000
+      reply-timeout-ms: 30000          # 구 waitor.wait(1000*30)
+      reconnect-interval-ms: 30000
+      spec-location: eai/interface.internal.json
+      interface-name: "#iif#"
+      hostname: ""                     # GlobalID 요청시스템(8자). 미지정 시 env HOSTNAME (AS-IS 폴백 atmap01t)
+
+# EAI 전문 바디 암복호화 (구 Gateway.EAI - AES/CBC/PKCS5Padding + Base64)
+eai:
+  cipher:
+    key-path: ${EAI_CIPHER_KEY_PATH:}  # 직렬화 Key 파일(구 eai.cipher.client.key). 미지정 시 암호화 비활성
+    iv: "14D7A984685CA8B0"             # 구 AS-IS 고정 IV
+    packet-body-encrypt: false         # 구 config.json eai.packet-body-encrypt
+
+jwt:
+  secret: ${JWT_SECRET}
+  access-token-validity: 3600000
+  refresh-token-validity: 86400000
+
+logging:
+  level:
+    kr.co.nh.atms: DEBUG
+
+sso:
+  provider: mock

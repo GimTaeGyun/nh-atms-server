@@ -1,0 +1,57 @@
+# =====================================================================
+# Jenkins 사전 설치 플러그인 목록
+# Dockerfile의 RUN jenkins-plugin-cli --plugin-file plugins.txt 에서 사용
+#
+# 형식: 플러그인ID:버전  (버전 생략 시 최신)
+# 참고: https://plugins.jenkins.io
+# =====================================================================
+
+# ── 파이프라인 핵심 ────────────────────────────────────────────────
+workflow-aggregator          # Pipeline 플러그인 통합 패키지 (Declarative + Scripted)
+pipeline-stage-view          # 파이프라인 스테이지 실행 흐름 시각화
+pipeline-graph-view          # 파이프라인 그래프 UI
+
+# ── Docker 연동 ────────────────────────────────────────────────────
+docker-workflow              # Jenkinsfile 내 docker.build(), docker.image() 사용
+docker-plugin                # Jenkins 에이전트를 Docker 컨테이너로 실행
+
+# ── Git / GitHub 연동 ──────────────────────────────────────────────
+git                          # Git SCM 연동 (checkout, polling)
+github                       # GitHub 웹훅 수신, PR 상태 업데이트
+github-branch-source         # GitHub Organization/멀티브랜치 파이프라인
+
+# ── GitLab 연동 ────────────────────────────────────────────────────
+gitlab-plugin                # GitLab Webhook 수신 + 빌드 상태 GitLab에 리포트
+                             # Jenkinsfile: gitlabConnection(), gitlabBuilds() 사용
+                             # JCasC: unclassified.gitLabConnectionConfig 설정 가능
+gitlab-branch-source         # GitLab 멀티브랜치 파이프라인 (브랜치/MR 자동 감지)
+gitlab-oauth                 # GitLab OAuth2 SSO 로그인 (securityRealm: gitLab)
+
+# ── 인증 / 시크릿 관리 ────────────────────────────────────────────
+credentials                  # Credentials 저장소 (암호화)
+credentials-binding          # withCredentials() 블록으로 파이프라인에 시크릿 주입
+plain-credentials            # Username/Password, Secret Text Credentials 타입
+ssh-agent                    # sshagent() 스텝 제공 — SSH 키를 파이프라인 블록 내에서만 활성화
+                             # Jenkinsfile의 sshagent(credentials: ['server-ssh-key']) 에서 사용
+
+# ── 빌드 도구 ─────────────────────────────────────────────────────
+gradle                       # Gradle 빌드 실행 (useWrapper=true로 프로젝트 gradlew 사용)
+nodejs                       # Node.js / npm 빌드 (프론트엔드 빌드용)
+
+# ── 테스트 / 품질 리포트 ─────────────────────────────────────────
+junit                        # JUnit XML 테스트 결과 수집·시각화
+jacoco                       # 코드 커버리지 리포트
+
+# ── 알림 ────────────────────────────────────────────────────────
+slack                        # Slack 채널 빌드 결과 알림
+
+# ── UI / UX ─────────────────────────────────────────────────────
+blueocean                    # 현대적인 파이프라인 시각화 UI
+timestamper                  # 콘솔 출력에 타임스탬프 추가
+ansicolor                    # 콘솔 출력 ANSI 컬러 지원 (Gradle 빌드 로그 색상)
+
+# ── 유틸리티 ────────────────────────────────────────────────────
+ws-cleanup                   # 빌드 후 워크스페이스 자동 정리
+build-timeout                # 빌드 최대 실행 시간 제한
+rebuild                      # 이전 빌드 파라미터로 재실행
+configuration-as-code        # JCasC: YAML 파일로 Jenkins 설정 자동화

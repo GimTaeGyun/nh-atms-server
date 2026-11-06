@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.nh.atms.journal.mapper.FaultAnalysisWriteMapper">
+
+    <!-- 장애 이력 1건 적재 (PK 중복 시 무시) -->
+    <insert id="insert">
+        INSERT /*+ IGNORE_ROW_ON_DUPKEY_INDEX(T_FAULT_ANALYSIS, PK_T_FAULT_ANALYSIS) */
+          INTO T_FAULT_ANALYSIS (
+            TERM_GROUP_ID, TERM_ID, JNL_DATE, JNL_TIME,
+            DEVICE_ID, ERR_GROUP_CD, MODULE_TYPE_CD,
+            FAULT_CLASS_CD, ERR_CD, ATM_CO_CD, MODEL_CD,
+            STATUS, AUTO_REQUEST, REQUEST_FLAG,
+            BANK_CD, ACCOUNT_NO, TR_AMOUNT, CHECK_AMOUNT
+        ) VALUES (
+            #{termGroupId,jdbcType=CHAR}, #{termId,jdbcType=VARCHAR},
+            #{jnlDate,jdbcType=CHAR}, #{jnlTime,jdbcType=CHAR},
+            #{deviceId,jdbcType=CHAR}, #{errGroupCd,jdbcType=CHAR}, #{moduleTypeCd,jdbcType=CHAR},
+            #{faultClassCd,jdbcType=CHAR}, #{errCd,jdbcType=VARCHAR},
+            #{atmCoCd,jdbcType=CHAR}, #{modelCd,jdbcType=CHAR},
+            #{status,jdbcType=CHAR}, #{autoRequest,jdbcType=CHAR}, #{requestFlag,jdbcType=CHAR},
+            #{bankCd,jdbcType=CHAR}, #{accountNo,jdbcType=VARCHAR},
+            #{trAmount,jdbcType=NUMERIC}, #{checkAmount,jdbcType=NUMERIC}
+        )
+    </insert>
+
+    <!-- 장애 해소 - 동일 단말의 미완료(STATUS != '9') 장애건 조치완료 처리 -->
+    <update id="relieve">
+        UPDATE T_FAULT_ANALYSIS
+           SET FINISHED_DATE = #{finishedDate,jdbcType=CHAR},
+               FINISHED_TIME = #{finishedTime,jdbcType=CHAR},
+               STATUS        = '9'
+         WHERE TERM_GROUP_ID = #{termGroupId,jdbcType=CHAR}
+           AND TERM_ID       = #{termId,jdbcType=VARCHAR}
+           AND (STATUS IS NULL OR STATUS != '9')
+    </update>
+
+</mapper>

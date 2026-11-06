@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.nh.atms.ifex.mapper.StatusEnrichMapper">
+
+    <!-- 기기 상태/디바이스 기본정보 (레거시 selectAtmMonitorAndAtmDeviceStatus) -->
+    <select id="selectAtmStatusInfo" parameterType="map" resultType="map">
+        SELECT C.CORNER_NAME      AS "cornerName"
+             , C.CORNER_CD        AS "cornerCd"
+             , B.TERM_GROUP_NAME  AS "termGroupName"
+             , C.CORNER_TYPE_CD   AS "cornerTypeCd"
+             , CASE C.OPERATION_TYPE_CD
+                   WHEN '1' THEN '3'
+                   WHEN '2' THEN '2'
+                   WHEN '3' THEN '1'
+                   ELSE 'Z'
+               END               AS "operationTypeCd"
+             , CASE
+                   WHEN LENGTH(TRIM(C.SERVICE_START_TIME)) = 4 AND LENGTH(TRIM(C.SERVICE_END_TIME)) = 4
+                   THEN SUBSTR(C.SERVICE_START_TIME, 1, 2) || ':' || SUBSTR(C.SERVICE_START_TIME, 3, 2)
+                        || '~' ||
+                        SUBSTR(C.SERVICE_END_TIME, 1, 2)   || ':' || SUBSTR(C.SERVICE_END_TIME, 3, 2)
+                   ELSE '           '
+               END               AS "serviceTime"
+             , C.GUARD_CO_CD      AS "guardCoCd"
+             , C.OUTSRC_CO_CD     AS "outsrcCoCd"
+             , A.ASSET_SNO        AS "assetSno"
+             , A.ATM_CO_CD        AS "atmCoCd"
+             , A.MODEL_CD         AS "modelCd"
+             , A.PROTOCOL_TYPE    AS "protocolType"
+             , D.TERM_GROUP_ID    AS "termGroupId"
+             , D.TERM_ID          AS "termId"
+             , D.JNL_DATE         AS "jnlDate"
+             , D.JNL_TIME         AS "jnlTime"
+             , D.AGENT_TYPE       AS "agentType"
+             , SUBSTR(D.ATM_STATUS, 2) AS "atmStatus"
+             , D.ERR_CD           AS "errCd"
+             , D.ATM_ERR_CD       AS "atmErrCd"
+             , D.PROCESS_COUNT    AS "processCount"
+             , '0' || D.MAN_STATUS  AS "manStatus"
+             , '0' || D.OMAN_STATUS AS "omanStatus"
+             , '0' || D.SPR_STATUS  AS "sprStatus"
+             , '0' || D.JPR_STATUS  AS "jprStatus"
+             , '0' || D.CHK_STATUS  AS "chkStatus"
+             , '0' || D.CHA_STATUS  AS "chaStatus"
+             , '0' || D.MCR_STATUS  AS "mcrStatus"
+             , '0' || D.PB_STATUS   AS "pbStatus"
+             , '0' || D.RJT_STATUS  AS "rjtStatus"
+             , A.APP_VERSION      AS "appVersion"
+             , E.DES_APPLY        AS "desApply"
+             , E.IC_APPLY         AS "icApply"
+             , E.EMV_APPLY        AS "emvApply"
+             , E.IR_APPLY         AS "irApply"
+             , E.RF_APPLY         AS "rfApply"
+             , E.FP_APPLY         AS "fpApply"
+             , E.OMAN_APPLY       AS "omanApply"
+             , E.ENCODE_APPLY     AS "encodeApply"
+          FROM T_ATM A
+          LEFT JOIN T_ATM_GROUP B
+                 ON A.TERM_GROUP_ID = B.TERM_GROUP_ID
+          LEFT JOIN T_CORNER C
+                 ON A.CORNER_CD     = C.CORNER_CD
+                AND A.TERM_GROUP_ID = C.TERM_GROUP_ID
+          LEFT JOIN T_ATM_MONITOR D
+                 ON A.TERM_GROUP_ID = D.TERM_GROUP_ID
+                AND A.TERM_ID       = D.TERM_ID
+          LEFT JOIN T_ATM_DEVICE_STATUS E
+                 ON E.TERM_GROUP_ID = A.TERM_GROUP_ID
+                AND E.TERM_ID       = A.TERM_ID
+         WHERE A.TERM_GROUP_ID = #{termGroupId}
+           AND A.TERM_ID       = #{termId}
+           AND D.JNL_DATE      = #{jnlDate}
+           AND D.JNL_TIME      = #{jnlTime}
+    </select>
+
+    <!-- 카세트 잔여매수 (레거시 selectCassetteStatus). 5자리 우측정렬. -->
+    <select id="selectCassetteRemain" parameterType="map" resultType="map">
+        SELECT MAX(CASE WHEN DENOM_CD = '10000'  THEN SUBSTR(LPAD(TO_CHAR(NVL(REMAIN_COUNT, 0)), 5, '0'), -5) END) AS "manRemain"
+             , MAX(CASE WHEN DENOM_CD = '50000'  THEN SUBSTR(LPAD(TO_CHAR(NVL(REMAIN_COUNT, 0)), 5, '0'), -5) END) AS "omanRemain"
+             , MAX(CASE WHEN DENOM_CD = '100000' THEN SUBSTR(LPAD(TO_CHAR(NVL(REMAIN_COUNT, 0)), 5, '0'), -5) END) AS "checkRemain"
+          FROM T_CASSETTE_STATUS
+         WHERE TERM_GROUP_ID = #{termGroupId}
+           AND TERM_ID       = #{termId}
+           AND CASSETTE_TYPE IN ('1', '4')  <!-- 논리(1), 수표(4) -->
+    </select>
+
+    <!-- 대표 장애이력 1건 (레거시 selectFaultAnalysis, 장애분류코드 ASC 첫 건) -->
+    <select id="selectFaultAnalysis" parameterType="map" resultType="map">
+        SELECT *
+          FROM (
+                SELECT DEVICE_ID      AS "deviceId"
+                     , ERR_GROUP_CD   AS "errGroupCd"
+                     , MODULE_TYPE_CD AS "moduleTypeCd"
+                     , FAULT_CLASS_CD AS "faultClassCd"
+                     , ERR_CD         AS "errCd"
+                  FROM T_FAULT_ANALYSIS
+                 WHERE TERM_GROUP_ID = #{termGroupId}
+                   AND TERM_ID       = #{termId}
+                   AND JNL_DATE      = #{jnlDate}
+                   AND JNL_TIME      = #{jnlTime}
+                 ORDER BY FAULT_CLASS_CD ASC
+               )
+         WHERE ROWNUM = 1
+    </select>
+
+</mapper>

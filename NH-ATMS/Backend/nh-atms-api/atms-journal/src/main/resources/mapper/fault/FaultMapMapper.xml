@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.nh.atms.journal.mapper.FaultMapMapper">
+
+    <resultMap id="FaultMapRM" type="kr.co.nh.atms.journal.entity.FaultMap">
+        <result property="langCd"       column="LANG_CD"/>
+        <result property="deviceId"     column="DEVICE_ID"/>
+        <result property="moduleTypeCd" column="MODULE_TYPE_CD"/>
+        <result property="statusCd"     column="STATUS_CD"/>
+        <result property="faultClassCd" column="FAULT_CLASS_CD"/>
+        <result property="errGroupCd"   column="ERR_GROUP_CD"/>
+        <result property="faultFlag"    column="FAULT_FLAG"/>
+        <result property="autoRequest"  column="AUTO_REQUEST"/>
+        <result property="displayFlag"  column="DISPLAY_FLAG"/>
+        <result property="monitorFlag"  column="MONITOR_FLAG"/>
+        <result property="statusName"   column="STATUS_NAME"/>
+    </resultMap>
+
+    <select id="select" resultMap="FaultMapRM">
+        SELECT LANG_CD, DEVICE_ID, MODULE_TYPE_CD, STATUS_CD,
+               FAULT_CLASS_CD, ERR_GROUP_CD, FAULT_FLAG, AUTO_REQUEST,
+               DISPLAY_FLAG, MONITOR_FLAG, STATUS_NAME
+          FROM T_FAULT_MAP
+         WHERE LANG_CD        = #{langCd,jdbcType=CHAR}
+           AND DEVICE_ID      = #{deviceId,jdbcType=CHAR}
+           AND MODULE_TYPE_CD = #{moduleTypeCd,jdbcType=CHAR}
+           AND STATUS_CD      = #{statusCd,jdbcType=CHAR}
+    </select>
+
+</mapper>

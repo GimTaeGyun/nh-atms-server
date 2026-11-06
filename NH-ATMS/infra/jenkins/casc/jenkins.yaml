@@ -1,0 +1,77 @@
+# =====================================================================
+# Jenkins Configuration as Code (JCasC)
+#
+# 역할: Jenkins 최초 기동 시 관리자 계정·보안·기본 설정을 자동 구성
+# 환경변수: docker-compose.yml environment 또는 .env 에서 주입
+#
+# ⚠ GitLab OAuth 연동 방식
+#   JCasC로 GitLab 인증을 구성하려면 gitlab-oauth 플러그인이
+#   이미지에 설치된 상태에서 GITLAB_CLIENT_ID / SECRET 값이 있어야 함.
+#   현재는 Jenkins 로컬 계정으로 기동 후, UI에서 GitLab 연동 설정.
+#   (Manage Jenkins → Security → Security Realm → GitLab Authentication)
+# =====================================================================
+
+jenkins:
+
+  systemMessage: "NH-ATMS CI/CD Jenkins — 자동 구성 완료"
+
+  numExecutors: 2
+
+  # ── 인증: Jenkins 로컬 사용자 DB ────────────────────────────────
+  # GitLab OAuth 전환 시: securityRealm.local 전체를 아래 주석 블록으로 교체
+  securityRealm:
+    local:
+      allowsSignup: false
+      users:
+        - id: "${JENKINS_ADMIN_ID}"
+          password: "${JENKINS_ADMIN_PASSWORD}"
+          properties:
+            - mailer:
+                emailAddress: "${JENKINS_ADMIN_EMAIL:-admin@nh-atms.local}"
+
+  # GitLab OAuth 전환 시 위 local 블록 대신 아래 사용
+  # (GITLAB_CLIENT_ID / GITLAB_CLIENT_SECRET .env 입력 필수)
+  # securityRealm:
+  #   gitLab:
+  #     gitlabWebUri: "http://192.168.28.21:8180"
+  #     gitlabApiUri: "http://192.168.28.21:8180"
+  #     clientID:     "${GITLAB_CLIENT_ID}"
+  #     clientSecret: "${GITLAB_CLIENT_SECRET}"
+
+  # ── 권한: 로그인 사용자 전체 권한 ────────────────────────────────
+  authorizationStrategy:
+    loggedInUsersCanDoAnything:
+      allowAnonymousRead: false
+
+  # GitLab 그룹 기반 권한 전환 시 위 블록 대신 아래 사용
+  # (gitlab-oauth 플러그인 필요, securityRealm도 gitLab으로 전환 필요)
+  # authorizationStrategy:
+  #   gitlabCommitAuthorization:
+  #     gitlabWebUri:       "http://192.168.28.21:8180"
+  #     allowedGitlabGroup: "NH"
+  #     allowAnonymousReadAccess: false
+
+  # ── CSRF 보호 ─────────────────────────────────────────────────────
+  # 미명시 → Jenkins 기본값(CSRF 활성화)으로 동작
+
+# ── 플러그인별 설정 ─────────────────────────────────────────────
+unclassified:
+
+  location:
+    url:          "${JENKINS_URL:-http://localhost:8090/}"
+    adminAddress: "${JENKINS_ADMIN_EMAIL:-admin@nh-atms.local}"
+
+  # GitLab 서버 연결 (gitlab-plugin 설치 후 자동 적용)
+  # Jenkinsfile 에서 gitlabConnection('NH-GitLab') 으로 참조
+  gitLabConnectionConfig:
+    connections:
+      - name:                    "NH-GitLab"
+        url:                     "http://192.168.28.21:8180"
+        apiTokenId:              "gitlab-api-token"
+        clientBuilderId:         "autodetect"
+        connectionTimeout:       10
+        readTimeout:             10
+        ignoreCertificateErrors: false
+
+  timestamper:
+    allPipelines: true

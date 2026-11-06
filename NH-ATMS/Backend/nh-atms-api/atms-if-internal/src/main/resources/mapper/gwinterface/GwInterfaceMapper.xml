@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.nh.atms.ifin.mapper.GwInterfaceMapper">
+
+    <insert id="insert" parameterType="kr.co.nh.atms.ifin.entity.GwInterface">
+        <selectKey keyProperty="gwSeq" resultType="long" order="BEFORE">
+            SELECT SEQ_T_GW_INTERFACE.NEXTVAL FROM DUAL
+        </selectKey>
+        INSERT INTO T_GW_INTERFACE
+            (GW_SEQ, GLOBAL_ID, MSG_SEQNO, GW_FLAG, TR_CODE, IF_TYPE, TERM_GROUP_ID, TERM_ID,
+             SEND_DATA, RECV_DATA, RESULT_CD, RESULT_MSG,
+             SEND_DATE, SEND_TIME, RECV_DATE, RECV_TIME, REG_DT)
+        VALUES
+            (#{gwSeq}, #{globalId}, #{msgSeqNo}, NVL(#{gwFlag}, '0'), #{trCode}, #{ifType}, #{termGroupId}, #{termId},
+             #{sendData}, #{recvData}, #{resultCd}, #{resultMsg},
+             #{sendDate}, #{sendTime}, #{recvDate}, #{recvTime}, CURRENT_TIMESTAMP)
+    </insert>
+
+    <!-- 응답 수신 반영 : AS-IS updateGwInterface (WHERE LPAD(MSG_SEQNO,7,'0') = #{msgSeqNo}) 복원 -->
+    <update id="updateRecvByMsgSeqNo">
+        UPDATE T_GW_INTERFACE
+           SET GW_FLAG    = '1',
+               RECV_DATA  = #{recvData},
+               RESULT_CD  = #{resultCd},
+               RESULT_MSG = #{resultMsg},
+               RECV_DATE  = TO_CHAR(SYSDATE, 'YYYYMMDD'),
+               RECV_TIME  = TO_CHAR(SYSDATE, 'HH24MISS')
+         WHERE LPAD(MSG_SEQNO, 7, '0') = #{msgSeqNo}
+    </update>
+
+    <!-- 구 SP_GET_SEQNO('010','0','0') 대응 : Oracle 시퀀스 채번 (7자리 순환) -->
+    <select id="selectNextMsgSeqNo" resultType="string">
+        SELECT LPAD(TO_CHAR(SEQ_EAI_MSG_SEQNO.NEXTVAL), 7, '0') FROM DUAL
+    </select>
+
+</mapper>

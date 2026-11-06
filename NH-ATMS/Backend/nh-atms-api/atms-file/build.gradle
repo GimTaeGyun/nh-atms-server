@@ -1,0 +1,13 @@
+// atms-file : 파일 송수신 (구 atmf)
+plugins {
+    id 'org.springframework.boot'
+    id 'io.spring.dependency-management'
+}
+
+dependencies {
+    implementation project(':atms-common')
+    // FTP/SFTP (펌웨어 다운로드 등)
+    implementation 'org.springframework.integration:spring-integration-sftp'
+    // 원격명령 MIF 전문 <-> JSON 변환 (구 atmf 이식). 버전은 Spring Boot BOM 관리.
+    implementation 'com.google.code.gson:gson'
+}

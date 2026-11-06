@@ -1,0 +1,29 @@
+# Gitea 자동기동 (systemd --user Quadlet)
+#  위치: ~/.config/containers/systemd/atms-gitea.container
+#  전제: loginctl Linger=yes (재부팅 후 자동 기동)
+[Unit]
+Description=ATMS Gitea (HTTP 3000)
+Wants=network-online.target
+After=network-online.target
+
+[Container]
+ContainerName=atms-gitea
+Image=docker.io/gitea/gitea:latest-rootless
+PublishPort=3000:3000
+# Jenkins 와 같은 podman 네트워크 → 서로 컨테이너 이름(atms-gitea, atms-jenkins)으로 접속 (웹훅·소스 받기)
+# install-gitea.sh 가 없으면 만든다 (podman network create atms-net)
+Network=atms-net
+EnvironmentFile=%h/atms/infra/gitea/gitea.env
+Volume=%h/atms/infra/gitea/data:/var/lib/gitea:Z
+Volume=%h/atms/infra/gitea/config:/etc/gitea:Z
+# UserNS=keep-id 는 쓰지 않음 (podman 5.8.2 / crun 1.27 에서 기동 실패). data·config 는 install-gitea.sh 가 podman unshare chown 1000:1000
+# PodmanArgs 는 install-gitea.sh 가 다시 씀 (CPU 제한은 보류, GITEA_CPUS 지정 시에만)
+PodmanArgs=--memory=768m
+
+[Service]
+Restart=always
+RestartSec=10
+TimeoutStartSec=120
+
+[Install]
+WantedBy=default.target

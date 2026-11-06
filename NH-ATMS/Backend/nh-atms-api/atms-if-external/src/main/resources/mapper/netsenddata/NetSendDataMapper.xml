@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.nh.atms.ifex.mapper.NetSendDataMapper">
+
+    <insert id="insert" parameterType="kr.co.nh.atms.ifex.entity.NetSendData">
+        <selectKey keyProperty="sendSeq" resultType="long" order="BEFORE">
+            SELECT SEQ_T_NET_SEND_DATA.NEXTVAL FROM DUAL
+        </selectKey>
+        INSERT INTO T_NET_SEND_DATA
+            (SEND_SEQ, GLOBAL_ID, TR_CODE, IF_TYPE, TERM_GROUP_ID, TERM_ID,
+             SEND_MSG, RESULT_CD, RESULT_MSG, SEND_DATE, SEND_TIME,
+             PROVIDER_CD, ATMS_SN, VEND_SN, RAW_MSG, REG_DT)
+        VALUES
+            (#{sendSeq}, #{globalId}, #{trCode}, #{ifType}, #{termGroupId}, #{termId},
+             #{sendMsg}, #{resultCd}, #{resultMsg}, #{sendDate}, #{sendTime},
+             #{providerCd}, #{atmsSn}, #{vendSn}, #{rawMsg}, CURRENT_TIMESTAMP)
+    </insert>
+
+    <!-- 결번요청(IQ_04001110) 재전송용: 업체/송신일자/ATMS전문일련번호 기준 원 송신전문 조회 -->
+    <select id="selectForResend" resultType="kr.co.nh.atms.ifex.entity.NetSendData">
+        SELECT SEND_SEQ      AS "sendSeq"
+             , GLOBAL_ID     AS "globalId"
+             , TR_CODE       AS "trCode"
+             , IF_TYPE       AS "ifType"
+             , TERM_GROUP_ID AS "termGroupId"
+             , TERM_ID       AS "termId"
+             , SEND_MSG      AS "sendMsg"
+             , PROVIDER_CD   AS "providerCd"
+             , ATMS_SN       AS "atmsSn"
+             , VEND_SN       AS "vendSn"
+          FROM T_NET_SEND_DATA
+         WHERE PROVIDER_CD = #{providerCd}
+           AND SEND_DATE   = #{sendDate}
+           AND ATMS_SN     = #{atmsSn}
+         ORDER BY SEND_SEQ DESC
+         FETCH FIRST 1 ROWS ONLY
+    </select>
+
+</mapper>

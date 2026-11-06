@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.nh.atms.journal.mapper.JournalErrorMapper">
+
+    <insert id="insert" parameterType="kr.co.nh.atms.journal.entity.JournalError"
+            useGeneratedKeys="false" keyProperty="seq">
+        <selectKey keyProperty="seq" resultType="long" order="BEFORE">
+            SELECT SEQ_T_JOURNAL_ERROR.NEXTVAL FROM DUAL
+        </selectKey>
+        INSERT INTO T_JOURNAL_ERROR (
+            SEQ, JNL_DATE, JNL_TIME, ATM_ID, JNL_SEQ, JNL_KIND,
+            JNL_JSON, ERR_MSG, REG_DT
+        ) VALUES (
+            #{seq},
+            #{jnlDate,jdbcType=CHAR},   #{jnlTime,jdbcType=CHAR},
+            #{atmId,jdbcType=CHAR},     #{jnlSeq,jdbcType=CHAR},
+            #{jnlKind,jdbcType=CHAR},
+            #{jnlJson,jdbcType=CLOB},   #{errMsg,jdbcType=CLOB},
+            CURRENT_TIMESTAMP
+        )
+    </insert>
+
+    <resultMap id="errorMap" type="kr.co.nh.atms.journal.entity.JournalError">
+        <id     property="seq"         column="SEQ"/>
+        <result property="jnlDate"     column="JNL_DATE"/>
+        <result property="jnlTime"     column="JNL_TIME"/>
+        <result property="atmId"       column="ATM_ID"/>
+        <result property="jnlSeq"      column="JNL_SEQ"/>
+        <result property="jnlKind"     column="JNL_KIND"/>
+        <result property="jnlJson"     column="JNL_JSON"/>
+        <result property="errMsg"      column="ERR_MSG"/>
+        <result property="regDt"       column="REG_DT"/>
+        <result property="status"      column="STATUS"/>
+        <result property="retryCnt"    column="RETRY_CNT"/>
+        <result property="lastRetryDt" column="LAST_RETRY_DT"/>
+    </resultMap>
+
+    <select id="selectRetryable" resultMap="errorMap">
+        SELECT SEQ, JNL_DATE, JNL_TIME, ATM_ID, JNL_SEQ, JNL_KIND,
+               JNL_JSON, ERR_MSG, REG_DT, STATUS, RETRY_CNT, LAST_RETRY_DT
+        FROM T_JOURNAL_ERROR
+        WHERE STATUS = 'E'
+          AND NVL(RETRY_CNT, 0) &lt; #{maxRetry}
+        ORDER BY SEQ
+        OFFSET 0 ROWS FETCH NEXT #{limit} ROWS ONLY
+    </select>
+
+    <update id="markResolved">
+        UPDATE T_JOURNAL_ERROR
+           SET STATUS = 'R', LAST_RETRY_DT = CURRENT_TIMESTAMP
+         WHERE SEQ = #{seq}
+    </update>
+
+    <update id="markFailed">
+        UPDATE T_JOURNAL_ERROR
+           SET STATUS = 'F', RETRY_CNT = #{retryCnt}, LAST_RETRY_DT = CURRENT_TIMESTAMP
+         WHERE SEQ = #{seq}
+    </update>
+
+    <update id="incrementRetry">
+        UPDATE T_JOURNAL_ERROR
+           SET RETRY_CNT = NVL(RETRY_CNT, 0) + 1, LAST_RETRY_DT = CURRENT_TIMESTAMP
+         WHERE SEQ = #{seq}
+    </update>
+
+</mapper>

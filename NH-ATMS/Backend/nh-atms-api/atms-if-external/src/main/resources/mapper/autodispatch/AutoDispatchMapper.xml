@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.nh.atms.ifex.mapper.AutoDispatchMapper">
+
+    <!-- 1) 저널키 기준 미조치 자동출동 대상 장애이력 (레거시 selectFaultAnalysis) -->
+    <select id="selectFaultAnalysis" parameterType="map" resultType="map">
+        SELECT TERM_GROUP_ID  AS "termGroupId"
+             , TERM_ID        AS "termId"
+             , JNL_DATE       AS "jnlDate"
+             , JNL_TIME       AS "jnlTime"
+             , DEVICE_ID      AS "deviceId"
+             , ERR_GROUP_CD   AS "errGroupCd"
+             , MODULE_TYPE_CD AS "moduleTypeCd"
+             , FAULT_CLASS_CD AS "faultClassCd"
+             , ERR_CD         AS "errCd"
+             , ATM_CO_CD      AS "atmCoCd"
+             , MODEL_CD       AS "modelCd"
+          FROM T_FAULT_ANALYSIS
+         WHERE STATUS        = '0'          <!-- 발생(미조치) -->
+           AND REQUEST_FLAG  = '0'          <!-- 미요청 -->
+           AND AUTO_REQUEST IN ('1','2')    <!-- 자동출동 대상 -->
+           AND TERM_GROUP_ID = #{termGroupId}
+           AND TERM_ID       = #{termId}
+           AND JNL_DATE      = #{jnlDate}
+           AND JNL_TIME      = #{jnlTime}
+    </select>
+
+    <!-- 2) 장애그룹별 출동업체 설정 (레거시 selectErrorGroup) -->
+    <select id="selectErrorGroup" parameterType="map" resultType="map">
+        SELECT NVL(SERVICE_CALL , '0') AS "serviceCall"
+             , NVL(SECURITY_CALL, '0') AS "securityCall"
+             , NVL(ATM_CALL     , '0') AS "atmCall"
+             , ERR_GROUP_NAME          AS "errGroupName"
+          FROM T_ERRORGROUP
+         WHERE LANG_CD      = #{langCd}
+           AND ERR_GROUP_CD = #{errGroupCd}
+    </select>
+
+    <!-- 3) 휴일 여부 (레거시 selectExistsHoliday) -->
+    <select id="existsHoliday" parameterType="map" resultType="boolean">
+        SELECT CASE WHEN EXISTS (
+                   SELECT 1
+                     FROM T_HOLIDAY
+                    WHERE GROUP_CD IN (#{termGroupId}, '00001')
+                      AND HOLIDAY_DATE = #{today}
+               ) THEN 1 ELSE 0 END
+          FROM DUAL
+    </select>
+
+    <!-- 4) 코너 관리/운영 구분 출동업체 판정 룰 (레거시 selectAutoRequestCheck) -->
+    <select id="selectAutoRequestCheck" parameterType="map" resultType="map">
+        SELECT R.ATM_CO_FLAG       AS "atmCoFlag"
+             , R.OURSRC_FLAG       AS "oursrcFlag"
+             , R.GUARD_FLAG        AS "guardFlag"
+             , C.CCTV_SET_FLAG     AS "cctvSetFlag"
+             , C.MANAGE_TYPE_CD    AS "manageTypeCd"
+             , C.OPERATION_TYPE_CD AS "operationTypeCd"
+          FROM T_AUTOREQUESTCHECK R
+          LEFT JOIN T_ATM A
+                 ON A.TERM_GROUP_ID = #{termGroupId}
+                AND A.TERM_ID       = #{termId}
+          LEFT JOIN T_CORNER C
+                 ON C.TERM_GROUP_ID = A.TERM_GROUP_ID
+                AND C.CORNER_CD     = A.CORNER_CD
+         WHERE R.BANK_CD        = #{bankCd}
+           AND R.MANAGE_TYPE_CD = C.MANAGE_TYPE_CD
+        <if test="!isHoliday">
+            <!-- 휴일이 아닐 때: 용역관리는 무조건, 금고관리는 영업시간 내/외로 분기 -->
+            AND (
+                  C.MANAGE_TYPE_CD = '2'
+                  OR (
+                      C.MANAGE_TYPE_CD != '2'
+                      AND C.OPERATION_TYPE_CD IN ('1','2','3')
+                      AND R.OPERATION_TYPE_CD = '1'
+                      AND (
+                          (#{jnlTime6} BETWEEN R.BANK_START_TIME AND R.BANK_END_TIME
+                              AND R.FAULT_CLASS_CD = #{faultClassCd})
+                          OR
+                          (NOT (#{jnlTime6} BETWEEN R.BANK_START_TIME AND R.BANK_END_TIME)
+                              AND R.FAULT_TIME_CD = '2')
+                      )
+                  )
+            )
+        </if>
+        <if test="isHoliday">
+            <!-- 휴일이면: 영업시간 외(FAULT_TIME_CD=2) 기준 -->
+            AND C.OPERATION_TYPE_CD IN ('1','2','3')
+            AND R.OPERATION_TYPE_CD = '1'
+            AND R.FAULT_TIME_CD     = '2'
+        </if>
+        FETCH FIRST 1 ROWS ONLY
+    </select>
+
+    <!-- 5) 출동업체구분(providerType)에 따른 업체코드 (레거시 selectAtmJoinCorner) -->
+    <select id="selectProviderCd" parameterType="map" resultType="string">
+        SELECT CASE
+                   WHEN #{providerType} = '1' THEN A.ATM_CO_CD
+                   WHEN #{providerType} = '2' THEN B.GUARD_CO_CD
+                   WHEN #{providerType} = '3' THEN B.OUTSRC_CO_CD
+               END
+          FROM T_ATM A, T_CORNER B
+         WHERE A.TERM_GROUP_ID = B.TERM_GROUP_ID
+           AND A.CORNER_CD     = B.CORNER_CD
+           AND A.TERM_GROUP_ID = #{termGroupId}
+           AND A.TERM_ID       = #{termId}
+        <if test='providerType == "1"'>
+           AND B.MAINT_TYPE_CD = '1'   <!-- 기기사 직접계약 코너만 1차 출동 -->
+        </if>
+    </select>
+
+    <!-- 6) 최근 2일 내 동일 단말/분류/업체 진행중 출동요청 존재 (레거시 selectExistsFaultmanagement) -->
+    <select id="existsRecentFaultManagement" parameterType="map" resultType="boolean">
+        SELECT CASE WHEN EXISTS (
+                   SELECT 1
+                     FROM T_FAULT_MANAGEMENT
+                    WHERE TERM_GROUP_ID    = #{termGroupId}
+                      AND TERM_ID          = #{termId}
+                      AND FAULT_CLASS_CD   = #{faultClassCd}
+                      AND PROVIDER_TYPE_CD = #{providerType}
+                      AND VENDOR_CD        = #{providerCd}
+                      AND CALL_DATE       <![CDATA[ >= ]]> #{fromDate}
+                      AND FAULT_STATUS IN ('O','P')   <!-- 접수/진행(미완료·미취소) -->
+               ) THEN 1 ELSE 0 END
+          FROM DUAL
+    </select>
+
+    <!-- 출동요청 코멘트용 장애코드명 (레거시 T_ERRORCODE → 신규 T_ERROR_MESSAGE) -->
+    <select id="selectErrName" parameterType="map" resultType="string">
+        SELECT ERR_NAME
+          FROM T_ERROR_MESSAGE
+         WHERE ERR_GROUP_CD = #{errGroupCd}
+           AND ERR_CD       = #{errCd}
+        FETCH FIRST 1 ROWS ONLY
+    </select>
+
+    <!-- 출동요청 코멘트용 장치명 (레거시 T_ATMUNIT → 신규 T_ATM_UNIT) -->
+    <select id="selectDeviceName" parameterType="map" resultType="string">
+        SELECT DEVICE_NAME
+          FROM T_ATM_UNIT
+         WHERE DEVICE_ID = #{deviceId}
+        FETCH FIRST 1 ROWS ONLY
+    </select>
+
+    <!-- 7) 기기상태마스터 최종 출동요청 정보 갱신 (레거시 updateAtmStatus) -->
+    <update id="updateAtmStatus" parameterType="map">
+        UPDATE T_ATM_STATUS
+        <set>
+        <choose>
+            <when test='providerType == "1"'>   <!-- 기기업체 출동 -->
+                  LAST_ATM_CALL_DATE      = #{jnlDate}
+                , LAST_ATM_CALL_TIME      = #{jnlTime}
+                , LAST_ATM_SNO            = #{faultSeq}
+                , LAST_ATM_FAULT_CLASS_CD = #{faultClassCd}
+            </when>
+            <otherwise>                         <!-- 경비/용역업체 출동 -->
+                  LAST_OUT_CALL_DATE      = #{jnlDate}
+                , LAST_OUT_CALL_TIME      = #{jnlTime}
+                , LAST_OUT_SNO            = #{faultSeq}
+                , FAULT_CLASS_CD          = #{faultClassCd}
+            </otherwise>
+        </choose>
+        </set>
+        WHERE TERM_GROUP_ID = #{termGroupId}
+          AND TERM_ID       = #{termId}
+    </update>
+
+</mapper>

@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.nh.atms.journal.mapper.AgentCommandMapper">
+
+    <resultMap id="rm" type="kr.co.nh.atms.journal.entity.AgentCommand" autoMapping="true"/>
+
+    <insert id="insert" parameterType="kr.co.nh.atms.journal.entity.AgentCommand"
+            useGeneratedKeys="false" keyProperty="cmdId">
+        <selectKey keyProperty="cmdId" resultType="string" order="BEFORE">
+            SELECT 'CMD-' || TO_CHAR(SYSDATE, 'YYYYMMDD') || '-'
+                   || LPAD(SEQ_T_AGENT_COMMAND.NEXTVAL, 6, '0')
+              FROM DUAL
+        </selectKey>
+        INSERT INTO T_AGENT_COMMAND (
+            CMD_ID, TERM_GROUP_ID, TERM_ID, CMD_TYPE, PAYLOAD,
+            STATUS, TIMEOUT_SEC, REG_USER_ID, ISSUED_AT
+        ) VALUES (
+            #{cmdId,jdbcType=VARCHAR},
+            #{termGroupId,jdbcType=CHAR},   #{termId,jdbcType=VARCHAR},
+            #{cmdType,jdbcType=VARCHAR},    #{payload,jdbcType=CLOB},
+            'W',                            #{timeoutSec,jdbcType=NUMERIC},
+            #{regUserId,jdbcType=VARCHAR},  CURRENT_TIMESTAMP
+        )
+    </insert>
+
+    <select id="selectById" resultMap="rm">
+        SELECT CMD_ID, TERM_GROUP_ID, TERM_ID, CMD_TYPE, PAYLOAD,
+               STATUS, TIMEOUT_SEC, RESULT_CD, RESULT_DATA, ERR_MSG,
+               REG_USER_ID, ISSUED_AT, ACK_AT, COMPLETED_AT
+          FROM T_AGENT_COMMAND
+         WHERE CMD_ID = #{cmdId}
+    </select>
+
+    <select id="selectPending" resultMap="rm">
+        SELECT CMD_ID, TERM_GROUP_ID, TERM_ID, CMD_TYPE, PAYLOAD,
+               STATUS, TIMEOUT_SEC, RESULT_CD, RESULT_DATA, ERR_MSG,
+               REG_USER_ID, ISSUED_AT, ACK_AT, COMPLETED_AT
+          FROM T_AGENT_COMMAND
+         WHERE TERM_GROUP_ID = #{termGroupId}
+           AND TERM_ID       = #{termId}
+           AND STATUS        = 'W'
+         ORDER BY ISSUED_AT, CMD_ID
+         OFFSET 0 ROWS FETCH NEXT #{limit} ROWS ONLY
+    </select>
+
+    <update id="markAck">
+        UPDATE T_AGENT_COMMAND
+           SET STATUS = 'A',
+               ACK_AT = CURRENT_TIMESTAMP
+         WHERE CMD_ID = #{cmdId}
+           AND STATUS = 'W'
+    </update>
+
+    <update id="updateResult" parameterType="kr.co.nh.atms.journal.entity.AgentCommand">
+        UPDATE T_AGENT_COMMAND
+           SET STATUS       = #{status,jdbcType=CHAR},
+               RESULT_CD    = #{resultCd,jdbcType=VARCHAR},
+               RESULT_DATA  = #{resultData,jdbcType=CLOB},
+               ERR_MSG      = #{errMsg,jdbcType=VARCHAR},
+               COMPLETED_AT = CURRENT_TIMESTAMP
+         WHERE CMD_ID = #{cmdId}
+           AND STATUS IN ('W', 'A')
+    </update>
+
+    <select id="selectTimedOut" resultMap="rm">
+        SELECT CMD_ID, TERM_GROUP_ID, TERM_ID, CMD_TYPE, PAYLOAD,
+               STATUS, TIMEOUT_SEC, RESULT_CD, RESULT_DATA, ERR_MSG,
+               REG_USER_ID, ISSUED_AT, ACK_AT, COMPLETED_AT
+          FROM T_AGENT_COMMAND
+         WHERE STATUS IN ('W', 'A')
+           AND ISSUED_AT + NUMTODSINTERVAL(TIMEOUT_SEC, 'SECOND') &lt; CURRENT_TIMESTAMP
+         ORDER BY ISSUED_AT
+         OFFSET 0 ROWS FETCH NEXT #{limit} ROWS ONLY
+    </select>
+
+    <update id="markTimeout">
+        UPDATE T_AGENT_COMMAND
+           SET STATUS       = 'T',
+               ERR_MSG      = '실행 제한시간 초과(timeout)',
+               COMPLETED_AT = CURRENT_TIMESTAMP
+         WHERE CMD_ID = #{cmdId}
+           AND STATUS IN ('W', 'A')
+    </update>
+
+</mapper>

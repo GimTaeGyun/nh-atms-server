@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.nh.atms.web.role.mapper.RoleMapper">
+
+    <resultMap id="rm" type="kr.co.nh.atms.web.role.entity.Role" autoMapping="true"/>
+
+    <sql id="cols">
+        AUTH_CODE, AUTH_NAME, AUTH_DESC, AUTH_TYPE, FSTG_MENU_NO, USE_YN, REG_DT, UPD_DT
+    </sql>
+
+    <sql id="where">
+        <where>
+            <if test="authCode != null and authCode != ''">AND AUTH_CODE LIKE '%' || #{authCode} || '%'</if>
+            <if test="authName != null and authName != ''">AND AUTH_NAME LIKE '%' || #{authName} || '%'</if>
+            <if test="authType != null and authType != ''">AND AUTH_TYPE = #{authType}</if>
+            <if test="useYn != null and useYn != ''">AND USE_YN = #{useYn}</if>
+        </where>
+    </sql>
+
+    <select id="selectList" resultMap="rm">
+        SELECT <include refid="cols"/> FROM T_AUTH
+        <include refid="where"/>
+        ORDER BY AUTH_CODE
+        OFFSET #{offset} ROWS FETCH NEXT #{limit} ROWS ONLY
+    </select>
+
+    <select id="countList" resultType="long">SELECT COUNT(*) FROM T_AUTH <include refid="where"/></select>
+
+    <select id="selectAll" resultMap="rm">
+        SELECT <include refid="cols"/> FROM T_AUTH WHERE USE_YN = 'Y' ORDER BY AUTH_CODE
+    </select>
+
+    <select id="selectOne" resultMap="rm">
+        SELECT <include refid="cols"/> FROM T_AUTH WHERE AUTH_CODE = #{authCode}
+    </select>
+
+    <insert id="insert" parameterType="kr.co.nh.atms.web.role.entity.Role">
+        INSERT INTO T_AUTH (AUTH_CODE, AUTH_NAME, AUTH_DESC, AUTH_TYPE, FSTG_MENU_NO, USE_YN, REG_DT)
+        VALUES (#{authCode}, #{authName}, #{authDesc,jdbcType=VARCHAR}, #{authType,jdbcType=VARCHAR},
+                #{fstgMenuNo,jdbcType=NUMERIC}, NVL(#{useYn},'Y'), SYSTIMESTAMP)
+    </insert>
+
+    <update id="update" parameterType="kr.co.nh.atms.web.role.entity.Role">
+        UPDATE T_AUTH
+        <set>
+            <if test="authName != null">AUTH_NAME = #{authName},</if>
+            <if test="authDesc != null">AUTH_DESC = #{authDesc},</if>
+            <if test="authType != null">AUTH_TYPE = #{authType},</if>
+            <if test="fstgMenuNo != null">FSTG_MENU_NO = #{fstgMenuNo},</if>
+            <if test="useYn != null">USE_YN = #{useYn},</if>
+            UPD_DT = SYSTIMESTAMP
+        </set>
+        WHERE AUTH_CODE = #{authCode}
+    </update>
+
+    <delete id="delete">DELETE FROM T_AUTH WHERE AUTH_CODE = #{authCode}</delete>
+
+    <select id="countUsedByGroups" resultType="int">
+        SELECT COUNT(*)
+        FROM T_USER_GROUP_AUTH
+        WHERE AUTH_CODE = #{authCode}
+    </select>
+
+    <!-- 특정 메뉴 + 권한의 조회/수정 권한 저장 (UPSERT) -->
+    <update id="upsertMenuRolePerm" parameterType="kr.co.nh.atms.web.role.dto.MenuRolePermDetail">
+        MERGE INTO T_AUTH_MENU t
+        USING DUAL
+           ON (t.MENU_NO = #{menuNo} AND t.AUTH_CODE = #{authCode})
+         WHEN MATCHED THEN
+              UPDATE SET READ_YN  = #{readYn},
+                         WRITE_YN = #{writeYn},
+                         USE_YN   = 'Y',
+                         REG_DT   = SYSDATE
+         WHEN NOT MATCHED THEN
+              INSERT (AUTH_CODE, MENU_NO, USE_YN, READ_YN, WRITE_YN, REG_DT)
+              VALUES (#{authCode}, #{menuNo}, 'Y', #{readYn}, #{writeYn}, SYSDATE)
+    </update>
+
+    <!-- 특정 메뉴 + 권한의 조회/수정 허용 여부 조회 -->
+    <!-- T_AUTH_MENU 에 READ_YN, WRITE_YN 컬럼이 없다면 아래 DDL 실행 필요:           -->
+    <!-- ALTER TABLE T_AUTH_MENU ADD (READ_YN CHAR(1) DEFAULT 'Y' NOT NULL,           -->
+    <!--                              WRITE_YN CHAR(1) DEFAULT 'N' NOT NULL);          -->
+    <select id="selectMenuRolePerm"
+            resultType="kr.co.nh.atms.web.role.dto.MenuRolePermDetail">
+        SELECT AUTH_CODE, MENU_NO, READ_YN, WRITE_YN
+          FROM T_AUTH_MENU
+         WHERE MENU_NO   = #{menuNo}
+           AND AUTH_CODE = #{authCode}
+    </select>
+
+</mapper>

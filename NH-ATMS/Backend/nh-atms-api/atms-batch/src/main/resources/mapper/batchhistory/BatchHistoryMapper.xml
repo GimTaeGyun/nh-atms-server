@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.nh.atms.batch.mapper.BatchHistoryMapper">
+
+    <resultMap id="BatchHistoryResultMap" type="kr.co.nh.atms.batch.entity.BatchHistory" autoMapping="true"/>
+
+    <insert id="insert" parameterType="kr.co.nh.atms.batch.entity.BatchHistory"
+            useGeneratedKeys="true" keyProperty="histId" keyColumn="HIST_ID">
+        INSERT INTO T_BATCH_HISTORY (
+            PROC_NAME, HOST_NAME, RUN_TYPE, STATUS_CD,
+            START_DATE, START_TIME, REG_DT
+        ) VALUES (
+            #{procName}, #{hostName}, #{runType}, #{statusCd},
+            #{startDate}, #{startTime}, CURRENT_TIMESTAMP
+        )
+    </insert>
+
+    <update id="updateResult" parameterType="kr.co.nh.atms.batch.entity.BatchHistory">
+        UPDATE T_BATCH_HISTORY
+           SET STATUS_CD  = #{statusCd},
+               END_DATE   = #{endDate},
+               END_TIME   = #{endTime},
+               DELAY_TIME = #{delayTime},
+               TARGET_CNT = #{targetCnt},
+               PROC_CNT   = #{procCnt},
+               ERR_CNT    = #{errCnt},
+               ERR_MSG    = #{errMsg,jdbcType=VARCHAR}
+         WHERE HIST_ID = #{histId}
+    </update>
+
+    <select id="selectByProcName" resultMap="BatchHistoryResultMap">
+        SELECT HIST_ID, PROC_NAME, HOST_NAME, RUN_TYPE, STATUS_CD,
+               START_DATE, START_TIME, END_DATE, END_TIME,
+               DELAY_TIME, TARGET_CNT, PROC_CNT, ERR_CNT, ERR_MSG, REG_DT
+        FROM T_BATCH_HISTORY
+        WHERE PROC_NAME = #{procName}
+        ORDER BY HIST_ID DESC
+        OFFSET #{offset} ROWS FETCH NEXT #{limit} ROWS ONLY
+    </select>
+
+    <select id="countByProcName" resultType="long">
+        SELECT COUNT(*) FROM T_BATCH_HISTORY WHERE PROC_NAME = #{procName}
+    </select>
+
+</mapper>

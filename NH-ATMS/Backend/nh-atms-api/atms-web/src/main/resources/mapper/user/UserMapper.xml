@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.nh.atms.web.user.mapper.UserMapper">
+
+    <resultMap id="rm" type="kr.co.nh.atms.web.user.entity.User" autoMapping="true"/>
+
+    <sql id="cols">
+        USER_ID, USER_NAME, PASSWORD, EMP_NO, USER_GROUP_NO, USER_TYPE_CD,
+        EMAIL, PHONE_NO, CELL_PHONE_NO, DEPT_CD, DEPT_NAME, BRANCH_CD, USER_POSITION,
+        LAST_LOGIN_DT, LOGIN_FLAG, LOGIN_FAIL_CNT, LOCK_YN, PW_EXPIRE_DT, INFO_CHG_DT,
+        USE_YN, REG_DT, REG_ID, UPD_DT, UPD_ID
+    </sql>
+
+    <sql id="where">
+        <where>
+            <if test="userId != null and userId != ''">AND USER_ID LIKE '%' || #{userId} || '%'</if>
+            <if test="userName != null and userName != ''">AND USER_NAME LIKE '%' || #{userName} || '%'</if>
+            <if test="deptCd != null and deptCd != ''">AND DEPT_CD = #{deptCd}</if>
+            <if test="userTypeCd != null and userTypeCd != ''">AND USER_TYPE_CD = #{userTypeCd}</if>
+            <if test="useYn != null and useYn != ''">AND USE_YN = #{useYn}</if>
+            <if test="userGroupNo != null">AND USER_GROUP_NO = #{userGroupNo}</if>
+        </where>
+    </sql>
+
+    <select id="selectList" resultMap="rm">
+        SELECT <include refid="cols"/> FROM T_USER
+        <include refid="where"/>
+        ORDER BY USER_ID
+        OFFSET #{offset} ROWS FETCH NEXT #{limit} ROWS ONLY
+    </select>
+
+    <select id="countList" resultType="long">SELECT COUNT(*) FROM T_USER <include refid="where"/></select>
+
+    <select id="selectOne" resultMap="rm">
+        SELECT <include refid="cols"/> FROM T_USER WHERE USER_ID = #{userId}
+    </select>
+
+    <!-- ============================================================
+         로그인용: 사용자 + 그룹명 + 권한코드(첫 매핑) 조인
+         ============================================================ -->
+    <select id="findForLogin" resultMap="rm">
+        SELECT u.USER_ID, u.USER_NAME, u.PASSWORD, u.EMP_NO, u.USER_GROUP_NO, u.USER_TYPE_CD,
+               u.EMAIL, u.PHONE_NO, u.CELL_PHONE_NO, u.DEPT_CD, u.DEPT_NAME, u.BRANCH_CD, u.USER_POSITION,
+               u.LAST_LOGIN_DT, u.LOGIN_FLAG, u.LOGIN_FAIL_CNT, u.LOCK_YN, u.PW_EXPIRE_DT, u.INFO_CHG_DT,
+               u.USE_YN, u.REG_DT, u.REG_ID, u.UPD_DT, u.UPD_ID,
+               g.USER_GROUP_NAME,
+               ga.AUTH_CODE
+          FROM T_USER u
+          LEFT JOIN T_USER_GROUP      g  ON u.USER_GROUP_NO = g.USER_GROUP_NO
+          LEFT JOIN T_USER_GROUP_AUTH ga ON g.USER_GROUP_NO = ga.USER_GROUP_NO
+         WHERE u.USER_ID = #{userId}
+           AND ROWNUM = 1
+    </select>
+
+    <insert id="insert" parameterType="kr.co.nh.atms.web.user.entity.User">
+        INSERT INTO T_USER (
+            USER_ID, USER_NAME, PASSWORD, EMP_NO, USER_GROUP_NO, USER_TYPE_CD,
+            EMAIL, PHONE_NO, CELL_PHONE_NO, DEPT_CD, DEPT_NAME, BRANCH_CD, USER_POSITION,
+            USE_YN, LOCK_YN, LOGIN_FAIL_CNT, LOGIN_FLAG, REG_DT, REG_ID
+        ) VALUES (
+            #{userId}, #{userName}, #{password},
+            #{empNo,jdbcType=VARCHAR}, #{userGroupNo,jdbcType=NUMERIC}, #{userTypeCd,jdbcType=VARCHAR},
+            #{email,jdbcType=VARCHAR}, #{phoneNo,jdbcType=VARCHAR}, #{cellPhoneNo,jdbcType=VARCHAR},
+            #{deptCd,jdbcType=VARCHAR}, #{deptName,jdbcType=VARCHAR}, #{branchCd,jdbcType=VARCHAR},
+            #{userPosition,jdbcType=VARCHAR},
+            NVL(#{useYn,jdbcType=VARCHAR},'Y'), 'N', 0, 'N', SYSTIMESTAMP, #{regId}
+        )
+    </insert>
+
+    <update id="update" parameterType="kr.co.nh.atms.web.user.entity.User">
+        UPDATE T_USER
+        <set>
+            <if test="userName != null">USER_NAME = #{userName},</if>
+            <if test="empNo != null">EMP_NO = #{empNo},</if>
+            <if test="userGroupNo != null">USER_GROUP_NO = #{userGroupNo},</if>
+            <if test="userTypeCd != null">USER_TYPE_CD = #{userTypeCd},</if>
+            <if test="email != null">EMAIL = #{email},</if>
+            <if test="phoneNo != null">PHONE_NO = #{phoneNo},</if>
+            <if test="cellPhoneNo != null">CELL_PHONE_NO = #{cellPhoneNo},</if>
+            <if test="deptCd != null">DEPT_CD = #{deptCd},</if>
+            <if test="deptName != null">DEPT_NAME = #{deptName},</if>
+            <if test="branchCd != null">BRANCH_CD = #{branchCd},</if>
+            <if test="userPosition != null">USER_POSITION = #{userPosition},</if>
+            <if test="useYn != null">USE_YN = #{useYn},</if>
+            INFO_CHG_DT = SYSTIMESTAMP,
+            UPD_DT = SYSTIMESTAMP,
+            UPD_ID = #{updId}
+        </set>
+        WHERE USER_ID = #{userId}
+    </update>
+
+    <delete id="delete">DELETE FROM T_USER WHERE USER_ID = #{userId}</delete>
+
+    <update id="updatePassword">
+        UPDATE T_USER
+           SET PASSWORD = #{password},
+               PW_EXPIRE_DT = SYSTIMESTAMP + INTERVAL '90' DAY,
+               LOCK_YN = 'N',
+               LOGIN_FAIL_CNT = 0,
+               INFO_CHG_DT = SYSTIMESTAMP,
+               UPD_DT = SYSTIMESTAMP
+         WHERE USER_ID = #{userId}
+    </update>
+
+    <!-- 로그인 성공 -->
+    <update id="updateLoginSuccess">
+        UPDATE T_USER
+           SET LAST_LOGIN_DT  = SYSTIMESTAMP,
+               LOGIN_FLAG     = 'Y',
+               LOGIN_FAIL_CNT = 0
+         WHERE USER_ID = #{userId}
+    </update>
+
+    <!-- 로그인 실패 (5회 도달 시 자동 잠금) -->
+    <update id="incrementLoginFail">
+        UPDATE T_USER
+           SET LOGIN_FAIL_CNT = NVL(LOGIN_FAIL_CNT, 0) + 1,
+               LOCK_YN = CASE WHEN NVL(LOGIN_FAIL_CNT, 0) + 1 >= 5 THEN 'Y' ELSE LOCK_YN END
+         WHERE USER_ID = #{userId}
+    </update>
+
+    <!-- 계정 잠금 해제 -->
+    <update id="unlock">
+        UPDATE T_USER
+           SET LOCK_YN = 'N', LOGIN_FAIL_CNT = 0, UPD_DT = SYSTIMESTAMP
+         WHERE USER_ID = #{userId}
+    </update>
+
+    <!-- 사용여부 변경 -->
+    <update id="updateUseYn">
+        UPDATE T_USER SET USE_YN = #{useYn}, UPD_DT = SYSTIMESTAMP WHERE USER_ID = #{userId}
+    </update>
+
+    <!-- 로그아웃 -->
+    <update id="updateLogout">
+        UPDATE T_USER
+           SET LOGIN_FLAG = 'N'
+         WHERE USER_ID = #{userId}
+    </update>
+
+</mapper>
+

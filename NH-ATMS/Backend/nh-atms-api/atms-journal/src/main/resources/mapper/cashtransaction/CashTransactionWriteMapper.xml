@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.nh.atms.journal.mapper.CashTransactionWriteMapper">
+
+    <insert id="insert" parameterType="kr.co.nh.atms.journal.entity.CashTransaction">
+        INSERT /*+ IGNORE_ROW_ON_DUPKEY_INDEX(T_CASH_TRANSACTION, PK_T_CASH_TRANSACTION) */
+        INTO T_CASH_TRANSACTION (
+            TERM_GROUP_ID, TERM_ID, JNL_DATE, JNL_TIME,
+            DENOM_CD, DENOM_COUNT
+        ) VALUES (
+            #{termGroupId,jdbcType=CHAR},  #{termId,jdbcType=VARCHAR},
+            #{jnlDate,jdbcType=CHAR},      #{jnlTime,jdbcType=CHAR},
+            #{denomCd,jdbcType=VARCHAR},   #{denomCount,jdbcType=NUMERIC}
+        )
+    </insert>
+
+</mapper>

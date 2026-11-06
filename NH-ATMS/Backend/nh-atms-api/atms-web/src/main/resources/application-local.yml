@@ -1,0 +1,30 @@
+# =====================================================================
+# atms-web 로컬 개발환경 전용 시크릿
+#
+# ⚠ 이 파일은 .gitignore 처리되어 저장소에 커밋되지 않습니다.
+#    실제 비밀값을 포함하므로 절대 공유·커밋하지 마세요.
+#
+# 동작 원리:
+#   - application.yml 의 spring.profiles.active=local 로 인해 자동 로드
+#   - application.yml 의 ${JWT_SECRET} · ${SPRING_DATASOURCE_PASSWORD}
+#     플레이스홀더가 아래 값으로 해소됨
+#
+# Docker / CI 환경에서는 SPRING_PROFILES_ACTIVE=dev(또는 prod) 환경변수가
+# application.yml 의 기본 프로파일을 덮어써 이 파일이 로드되지 않습니다.
+# =====================================================================
+
+# application.yml 의 ${JWT_SECRET} 플레이스홀더 해소
+JWT_SECRET: nh-atms-dev-secret-key-must-be-at-least-256-bits-long-for-hs256
+
+# DB 접속(주소·계정·비밀번호)은 atms-common 의 local-common.yml 한 곳에서 (2026-11-02)
+spring:
+  config:
+    import: classpath:local-common.yml
+
+# 화면↔서버 민감필드(비밀번호) 암호화 — 로컬은 키 파일 없이 기동 시 임시 키 자동 생성 (재기동마다 바뀜)
+crypto:
+  field:
+    enabled: true
+    required: false
+    kid: local
+    generate-if-missing: true

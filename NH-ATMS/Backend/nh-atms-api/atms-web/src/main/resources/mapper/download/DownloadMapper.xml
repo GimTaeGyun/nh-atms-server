@@ -1,0 +1,325 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.nh.atms.web.download.mapper.DownloadMapper">
+
+    <resultMap id="deviceRm" type="kr.co.nh.atms.web.download.entity.DownloadDevice" autoMapping="true"/>
+    <resultMap id="pkgRm"    type="kr.co.nh.atms.web.download.entity.DownloadPackage" autoMapping="true"/>
+    <resultMap id="jobRm"    type="kr.co.nh.atms.web.download.entity.DownloadJob" autoMapping="true"/>
+
+    <!-- ===================================================================
+         개별다운로드관리 : 대상 기기 목록(현재버전 vs 최종버전 비교)
+    ==================================================================== -->
+    <sql id="deviceJoin">
+        FROM T_ATM A
+        LEFT JOIN T_AGENT_STATUS S
+               ON S.TERM_GROUP_ID = A.TERM_GROUP_ID
+              AND S.TERM_ID       = A.TERM_ID
+        LEFT JOIN T_ATM_MODEL M
+               ON M.MODEL_CD = A.MODEL_CD
+    </sql>
+
+    <sql id="deviceWhere">
+        <where>
+            A.ATM_STATUS IN ('1', '2')
+            <if test="termGroupId != null and termGroupId != ''">
+                AND A.TERM_GROUP_ID = #{termGroupId}
+            </if>
+            <if test="branchCd != null and branchCd != ''">
+                AND A.BRANCH_CD = #{branchCd}
+            </if>
+            <if test="cornerCd != null and cornerCd != ''">
+                AND A.CORNER_CD = #{cornerCd}
+            </if>
+            <if test="termId != null and termId != ''">
+                AND A.TERM_ID LIKE '%' || #{termId} || '%'
+            </if>
+            <if test="atmCoCd != null and atmCoCd != ''">
+                AND A.ATM_CO_CD = #{atmCoCd}
+            </if>
+            <if test="modelCd != null and modelCd != ''">
+                AND A.MODEL_CD = #{modelCd}
+            </if>
+        </where>
+    </sql>
+
+    <select id="selectDeviceList" resultMap="deviceRm">
+        SELECT A.TERM_GROUP_ID, A.TERM_ID, A.BRANCH_CD, A.CORNER_CD,
+               A.LOCATION_NAME, A.ATM_CO_CD, A.MODEL_CD, M.MODEL_NAME,
+               A.ATM_IP, A.APP_VERSION,
+               S.AGENT_VER, S.AP_DOWN_VER, S.CONNECT_FLAG,
+               M.LAST_APP_VER
+        <include refid="deviceJoin"/>
+        <include refid="deviceWhere"/>
+        ORDER BY A.TERM_GROUP_ID, A.TERM_ID
+        OFFSET #{offset} ROWS FETCH NEXT #{limit} ROWS ONLY
+    </select>
+
+    <select id="countDeviceList" resultType="long">
+        SELECT COUNT(*)
+        <include refid="deviceJoin"/>
+        <include refid="deviceWhere"/>
+    </select>
+
+    <!-- 일괄 배포 대상 : 해당 기종(업체+모델)의 다운로드 가능 기기 -->
+    <select id="selectTargetDevices" resultMap="deviceRm">
+        SELECT A.TERM_GROUP_ID, A.TERM_ID
+          FROM T_ATM A
+         WHERE A.ATM_STATUS IN ('1', '2')
+           AND A.ATM_CO_CD = #{atmCoCd}
+           AND A.MODEL_CD  = #{modelCd}
+         ORDER BY A.TERM_GROUP_ID, A.TERM_ID
+    </select>
+
+    <!-- ===================================================================
+         일괄다운로드관리 : 다운로드 패키지 마스터
+    ==================================================================== -->
+    <sql id="pkgCols">
+        P.PKG_ID, P.PKG_NAME, P.PKG_TYPE, P.ATM_CO_CD, P.MODEL_CD, P.DOWN_VER,
+        P.FILE_NAME, P.FILE_SIZE, P.FILE_PATH, P.DOWNLOAD_PATH, P.EXEC_CMD,
+        P.APPLY_DATE, P.APPLY_TIME, P.CRC_VALUE,
+        P.CONFIRM_STATUS, P.CONFIRM_USER_ID, P.CONFIRM_DT,
+        P.USE_YN, P.REG_USER_ID, P.REG_DT, P.UPD_DT,
+        M.MODEL_NAME
+    </sql>
+
+    <sql id="pkgWhere">
+        <where>
+            P.USE_YN = 'Y'
+            <if test="atmCoCd != null and atmCoCd != ''">
+                AND P.ATM_CO_CD = #{atmCoCd}
+            </if>
+            <if test="modelCd != null and modelCd != ''">
+                AND P.MODEL_CD = #{modelCd}
+            </if>
+            <if test="pkgType != null and pkgType != ''">
+                AND P.PKG_TYPE = #{pkgType}
+            </if>
+            <if test="confirmStatus != null and confirmStatus != ''">
+                AND P.CONFIRM_STATUS = #{confirmStatus}
+            </if>
+        </where>
+    </sql>
+
+    <select id="selectPackageList" resultMap="pkgRm">
+        SELECT <include refid="pkgCols"/>
+          FROM T_DOWNLOAD_PACKAGE P
+          LEFT JOIN T_ATM_MODEL M ON M.MODEL_CD = P.MODEL_CD
+        <include refid="pkgWhere"/>
+        ORDER BY P.REG_DT DESC, P.PKG_ID DESC
+        OFFSET #{offset} ROWS FETCH NEXT #{limit} ROWS ONLY
+    </select>
+
+    <select id="countPackageList" resultType="long">
+        SELECT COUNT(*)
+          FROM T_DOWNLOAD_PACKAGE P
+        <include refid="pkgWhere"/>
+    </select>
+
+    <select id="selectPackage" resultMap="pkgRm">
+        SELECT <include refid="pkgCols"/>
+          FROM T_DOWNLOAD_PACKAGE P
+          LEFT JOIN T_ATM_MODEL M ON M.MODEL_CD = P.MODEL_CD
+         WHERE P.PKG_ID = #{pkgId}
+    </select>
+
+    <insert id="insertPackage" parameterType="kr.co.nh.atms.web.download.entity.DownloadPackage"
+            useGeneratedKeys="false" keyProperty="pkgId">
+        <selectKey keyProperty="pkgId" resultType="long" order="BEFORE">
+            SELECT SEQ_T_DOWNLOAD_PACKAGE.NEXTVAL FROM DUAL
+        </selectKey>
+        INSERT INTO T_DOWNLOAD_PACKAGE (
+            PKG_ID, PKG_NAME, PKG_TYPE, ATM_CO_CD, MODEL_CD, DOWN_VER,
+            FILE_NAME, FILE_SIZE, FILE_PATH, DOWNLOAD_PATH, EXEC_CMD,
+            APPLY_DATE, APPLY_TIME, CRC_VALUE,
+            CONFIRM_STATUS, USE_YN, REG_USER_ID, REG_DT
+        ) VALUES (
+            #{pkgId,jdbcType=NUMERIC},      #{pkgName,jdbcType=VARCHAR},
+            #{pkgType,jdbcType=CHAR},       #{atmCoCd,jdbcType=VARCHAR},
+            #{modelCd,jdbcType=VARCHAR},    #{downVer,jdbcType=VARCHAR},
+            #{fileName,jdbcType=VARCHAR},   #{fileSize,jdbcType=NUMERIC},
+            #{filePath,jdbcType=VARCHAR},
+            NVL(#{downloadPath,jdbcType=VARCHAR}, 'D:\LGDOWN'),
+            #{execCmd,jdbcType=VARCHAR},
+            #{applyDate,jdbcType=CHAR},     #{applyTime,jdbcType=CHAR},
+            #{crcValue,jdbcType=VARCHAR},
+            'N', 'Y', #{regUserId,jdbcType=VARCHAR}, CURRENT_TIMESTAMP
+        )
+    </insert>
+
+    <update id="updateConfirm">
+        UPDATE T_DOWNLOAD_PACKAGE
+           SET CONFIRM_STATUS  = #{status},
+               CONFIRM_USER_ID = #{userId},
+               CONFIRM_DT      = CURRENT_TIMESTAMP,
+               UPD_DT          = CURRENT_TIMESTAMP
+         WHERE PKG_ID = #{pkgId}
+    </update>
+
+    <!-- ===================================================================
+         배포 작업/이력
+    ==================================================================== -->
+    <insert id="insertJob" parameterType="kr.co.nh.atms.web.download.entity.DownloadJob"
+            useGeneratedKeys="false" keyProperty="jobId">
+        <selectKey keyProperty="jobId" resultType="long" order="BEFORE">
+            SELECT SEQ_T_DOWNLOAD_JOB.NEXTVAL FROM DUAL
+        </selectKey>
+        INSERT INTO T_DOWNLOAD_JOB (
+            JOB_ID, PKG_ID, TERM_GROUP_ID, TERM_ID, EXEC_TYPE,
+            STATUS, CMD_ID, RESERVE_DATE, RESERVE_TIME, REG_USER_ID, REG_DT
+        ) VALUES (
+            #{jobId,jdbcType=NUMERIC},      #{pkgId,jdbcType=NUMERIC},
+            #{termGroupId,jdbcType=CHAR},   #{termId,jdbcType=VARCHAR},
+            #{execType,jdbcType=CHAR},
+            #{status,jdbcType=CHAR},        #{cmdId,jdbcType=VARCHAR},
+            #{reserveDate,jdbcType=CHAR},   #{reserveTime,jdbcType=CHAR},
+            #{regUserId,jdbcType=VARCHAR},  CURRENT_TIMESTAMP
+        )
+    </insert>
+
+    <sql id="jobWhere">
+        <where>
+            <if test="pkgId != null">
+                AND J.PKG_ID = #{pkgId}
+            </if>
+            <if test="termGroupId != null and termGroupId != ''">
+                AND J.TERM_GROUP_ID = #{termGroupId}
+            </if>
+            <if test="termId != null and termId != ''">
+                AND J.TERM_ID = #{termId}
+            </if>
+            <if test="execType != null and execType != ''">
+                AND J.EXEC_TYPE = #{execType}
+            </if>
+            <if test="status != null and status != ''">
+                AND J.STATUS = #{status}
+            </if>
+            <if test="fromDate != null and fromDate != ''">
+                AND J.REG_DT &gt;= TO_TIMESTAMP(#{fromDate}, 'YYYYMMDD')
+            </if>
+            <if test="toDate != null and toDate != ''">
+                AND J.REG_DT &lt; TO_TIMESTAMP(#{toDate}, 'YYYYMMDD') + 1
+            </if>
+        </where>
+    </sql>
+
+    <select id="selectJobList" resultMap="jobRm">
+        SELECT J.JOB_ID, J.PKG_ID, J.TERM_GROUP_ID, J.TERM_ID, J.EXEC_TYPE,
+               J.STATUS, J.CMD_ID, J.RESERVE_DATE, J.RESERVE_TIME,
+               J.RESULT_CD, J.RESULT_MSG, J.RESULT_DT, J.REG_USER_ID, J.REG_DT,
+               P.PKG_NAME, P.PKG_TYPE, P.DOWN_VER, P.FILE_NAME
+          FROM T_DOWNLOAD_JOB J
+          LEFT JOIN T_DOWNLOAD_PACKAGE P ON P.PKG_ID = J.PKG_ID
+        <include refid="jobWhere"/>
+        ORDER BY J.REG_DT DESC, J.JOB_ID DESC
+        OFFSET #{offset} ROWS FETCH NEXT #{limit} ROWS ONLY
+    </select>
+
+    <select id="countJobList" resultType="long">
+        SELECT COUNT(*)
+          FROM T_DOWNLOAD_JOB J
+        <include refid="jobWhere"/>
+    </select>
+
+    <!-- ===================================================================
+         개별다운로드(자체 파일 업로드) : MG indDownManage 정합
+         T_ATM_DOWNLOAD(파일 마스터) + T_ATM_APPLY_HISTORY(기기별 이력)
+    ==================================================================== -->
+    <resultMap id="applyHistRm" type="kr.co.nh.atms.web.download.entity.AtmApplyHistory" autoMapping="true"/>
+
+    <!-- 다운로드일련번호 채번 (7자리 0패딩) -->
+    <select id="nextDownNo" resultType="string">
+        SELECT LPAD(SEQ_T_ATM_DOWNLOAD.NEXTVAL, 7, '0') FROM DUAL
+    </select>
+
+    <insert id="insertAtmDownload" parameterType="kr.co.nh.atms.web.download.entity.AtmDownload">
+        INSERT INTO T_ATM_DOWNLOAD (
+            DOWN_NO, APP_TYPE_CD, ATM_CO_CD, MODEL_CD,
+            APP_FILE_NAME, APP_FILE_SIZE, APP_VER, FILE_COMPRESS,
+            EXE_TYPE_CD, EXE_FILE_PATH, DOWNLOAD_PATH,
+            SVR_UPLOAD_DATE, SVR_UPLOAD_TIME, APPLY_CAUSE, APPLY_MEMO, CRC_VALUE,
+            ENTER_DATE, ENTER_TIME, ENTER_USER_ID
+        ) VALUES (
+            #{downNo,jdbcType=VARCHAR},       #{appTypeCd,jdbcType=CHAR},
+            #{atmCoCd,jdbcType=VARCHAR},      #{modelCd,jdbcType=VARCHAR},
+            #{appFileName,jdbcType=VARCHAR},  #{appFileSize,jdbcType=NUMERIC},
+            #{appVer,jdbcType=VARCHAR},       NVL(#{fileCompress,jdbcType=CHAR}, '0'),
+            NVL(#{exeTypeCd,jdbcType=CHAR}, '0'),
+            #{exeFilePath,jdbcType=VARCHAR},  NVL(#{downloadPath,jdbcType=VARCHAR}, 'D:\LGDOWN'),
+            TO_CHAR(SYSDATE, 'YYYYMMDD'),     TO_CHAR(SYSDATE, 'HH24MISS'),
+            #{applyCause,jdbcType=CHAR},      #{applyMemo,jdbcType=VARCHAR},
+            #{crcValue,jdbcType=VARCHAR},
+            TO_CHAR(SYSDATE, 'YYYYMMDD'),     TO_CHAR(SYSDATE, 'HH24MISS'),
+            #{enterUserId,jdbcType=VARCHAR}
+        )
+    </insert>
+
+    <!-- 기기 단건 조회(금고+기번) : 대상 검증/업체·모델 확인용 -->
+    <select id="selectDeviceOne" resultMap="deviceRm">
+        SELECT A.TERM_GROUP_ID, A.TERM_ID, A.BRANCH_CD, A.CORNER_CD,
+               A.LOCATION_NAME, A.ATM_CO_CD, A.MODEL_CD, M.MODEL_NAME,
+               A.ATM_IP, A.APP_VERSION
+          FROM T_ATM A
+          LEFT JOIN T_ATM_MODEL M ON M.MODEL_CD = A.MODEL_CD
+         WHERE A.TERM_GROUP_ID = #{termGroupId}
+           AND A.TERM_ID       = #{termId}
+    </select>
+
+    <insert id="insertApplyHistory" parameterType="kr.co.nh.atms.web.download.entity.AtmApplyHistory">
+        INSERT INTO T_ATM_APPLY_HISTORY (
+            DOWN_NO, TERM_GROUP_ID, TERM_ID, CMD_ID,
+            START_DATE, START_TIME, APPLY_FLAG, APPLY_RESULT, ASYNC_UID,
+            REG_USER_ID, REG_DT
+        ) VALUES (
+            #{downNo,jdbcType=VARCHAR},       #{termGroupId,jdbcType=VARCHAR},
+            #{termId,jdbcType=VARCHAR},       #{cmdId,jdbcType=VARCHAR},
+            TO_CHAR(SYSDATE, 'YYYYMMDD'),     TO_CHAR(SYSDATE, 'HH24MISS'),
+            #{applyFlag,jdbcType=CHAR},       #{applyResult,jdbcType=CHAR},
+            #{asyncUid,jdbcType=NUMERIC},     #{regUserId,jdbcType=VARCHAR},
+            CURRENT_TIMESTAMP
+        )
+    </insert>
+
+    <sql id="applyHistWhere">
+        <where>
+            <if test="downNo != null and downNo != ''">
+                AND H.DOWN_NO = #{downNo}
+            </if>
+            <if test="termGroupId != null and termGroupId != ''">
+                AND H.TERM_GROUP_ID = #{termGroupId}
+            </if>
+            <if test="termId != null and termId != ''">
+                AND H.TERM_ID = #{termId}
+            </if>
+            <if test="applyFlag != null and applyFlag != ''">
+                AND H.APPLY_FLAG = #{applyFlag}
+            </if>
+            <if test="fromDate != null and fromDate != ''">
+                AND H.REG_DT &gt;= TO_TIMESTAMP(#{fromDate}, 'YYYYMMDD')
+            </if>
+            <if test="toDate != null and toDate != ''">
+                AND H.REG_DT &lt; TO_TIMESTAMP(#{toDate}, 'YYYYMMDD') + 1
+            </if>
+        </where>
+    </sql>
+
+    <select id="selectApplyHistoryList" resultMap="applyHistRm">
+        SELECT H.DOWN_NO, H.TERM_GROUP_ID, H.TERM_ID, H.CMD_ID,
+               H.START_DATE, H.START_TIME, H.END_DATE, H.END_TIME,
+               H.APPLY_FLAG, H.APPLY_RESULT, H.ASYNC_UID,
+               H.REG_USER_ID, H.REG_DT,
+               D.APP_TYPE_CD, D.APP_FILE_NAME, D.APP_VER, D.ATM_CO_CD, D.MODEL_CD
+          FROM T_ATM_APPLY_HISTORY H
+          LEFT JOIN T_ATM_DOWNLOAD D ON D.DOWN_NO = H.DOWN_NO
+        <include refid="applyHistWhere"/>
+        ORDER BY H.REG_DT DESC, H.DOWN_NO DESC, H.TERM_GROUP_ID, H.TERM_ID
+        OFFSET #{offset} ROWS FETCH NEXT #{limit} ROWS ONLY
+    </select>
+
+    <select id="countApplyHistoryList" resultType="long">
+        SELECT COUNT(*)
+          FROM T_ATM_APPLY_HISTORY H
+        <include refid="applyHistWhere"/>
+    </select>
+
+</mapper>

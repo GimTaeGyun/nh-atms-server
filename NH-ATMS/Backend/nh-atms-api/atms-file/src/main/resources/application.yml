@@ -1,0 +1,73 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: atms-file
+  profiles:
+    active: local
+    # local  → 로컬 IntelliJ 기본값 (application-local.yml 함께 로드)
+    # dev    → Docker Compose: SPRING_PROFILES_ACTIVE=dev 환경변수가 이 값을 덮어씀
+    # prod   → CI/CD 배포 시 Jenkins Credentials에서 주입
+  # Oracle 19C — atms-web 과 동일 DB 공유 (T_JOURNALIMAGE 등)
+  datasource:
+    url:      ${SPRING_DATASOURCE_URL:jdbc:oracle:thin:@//192.168.28.21:1521/ATMSPDB}
+    driver-class-name: oracle.jdbc.OracleDriver
+    username: ${SPRING_DATASOURCE_USERNAME:ATMS}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 1
+      connection-timeout: 30000
+      pool-name: AtmsFileHikariCP
+      connection-init-sql: "ALTER SESSION SET TIME_ZONE = 'Asia/Seoul'"
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
+
+mybatis:
+  mapper-locations: classpath:mapper/**/*.xml
+  # 엔티티 패키지로만 한정 (remote.mif.Converter 내부 로컬 클래스 'Convert' alias 충돌 방지)
+  type-aliases-package: kr.co.nh.atms.file.image.entity
+  configuration:
+    map-underscore-to-camel-case: true
+
+# 저널 이미지 저장소 (atmr 1-C)
+file:
+  storage:
+    base-dir: ${ATMS_IMAGE_BASE_DIR:./data/atms-img}
+  # 펌웨어 다운로드 저장소/원격 SFTP 연동 (구 atmf 펌웨어 채널)
+  firmware:
+    repo-dir: ${ATMS_FIRMWARE_DIR:./data/atms-firmware}
+    sftp:
+      enabled:     ${ATMS_FIRMWARE_SFTP_ENABLED:false}
+      host:        ${ATMS_FIRMWARE_SFTP_HOST:}
+      port:        ${ATMS_FIRMWARE_SFTP_PORT:22}
+      username:    ${ATMS_FIRMWARE_SFTP_USER:}
+      password:    ${ATMS_FIRMWARE_SFTP_PASSWORD:}
+      remote-dir:  ${ATMS_FIRMWARE_SFTP_REMOTE_DIR:/firmware}
+
+# 인바운드 NIO 소켓 파일서버 (구 atmf Server — Agent 청크 암호화 파일 송수신)
+# enabled=false 기본: 명시적으로 켜기 전에는 포트 bind 안 함 (기존 배포 무영향)
+atmf:
+  server:
+    enabled:    ${ATMS_FILE_SERVER_ENABLED:false}
+    bind-ip:    ${ATMS_FILE_SERVER_BIND_IP:0.0.0.0}
+    port:       ${ATMS_FILE_SERVER_PORT:21001}
+    buf:        ${ATMS_FILE_SERVER_BUF:131072}   # 세션당 버퍼(byte) — 구 atmf session.buf
+    max:        ${ATMS_FILE_SERVER_MAX:1000}     # 최대 동시 세션 — 구 atmf session.max
+    repository: ${ATMS_FILE_SERVER_REPO:./data/atms-repo}
+    l4-allowlist: []   # L4 헬스체크 IP — 매칭 시 즉시 연결 종료 (구 atmf l4 배열)
+
+jwt:
+  secret: ${JWT_SECRET}
+  access-token-validity: 3600000
+  refresh-token-validity: 86400000
+
+logging:
+  level:
+    kr.co.nh.atms: DEBUG
+
+sso:
+  provider: mock

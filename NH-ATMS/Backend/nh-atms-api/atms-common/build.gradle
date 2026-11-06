@@ -1,0 +1,49 @@
+// =============================================================
+// atms-common : 공통 라이브러리 (Spring Boot 미적용 - jar 만 생성)
+//   - 응답/예외/로깅
+//   - 보안 (SecurityConfig, JWT, SSO)
+//   - 모든 ATMS 서브 모듈의 공통 의존성
+// =============================================================
+plugins {
+    id 'java-library'
+}
+
+dependencies {
+    // Spring Boot starters (api 로 노출 → 하위 모듈에서 그대로 사용)
+    api 'org.springframework.boot:spring-boot-starter-web'
+    api 'org.springframework.boot:spring-boot-starter-security'
+    api 'org.springframework.boot:spring-boot-starter-validation'
+    api 'org.springframework.boot:spring-boot-starter-aop'
+
+    // MyBatis
+    api 'org.mybatis.spring.boot:mybatis-spring-boot-starter:3.0.4'
+
+    // JWT
+    api 'io.jsonwebtoken:jjwt-api:0.12.6'
+    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
+    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
+
+    // Swagger
+    api 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.4'
+
+    // Excel (POI)
+    api 'org.apache.poi:poi-ooxml:5.3.0'
+
+    // DB
+    runtimeOnly 'com.oracle.database.jdbc:ojdbc11'
+    // 은행 DB 문자셋 KO16MSWIN949 처리 (없으면 ORA-17056 "지원되지 않는 문자 집합"). 버전은 Spring Boot BOM 이 ojdbc11 과 맞춤
+    runtimeOnly 'com.oracle.database.nls:orai18n'
+    runtimeOnly 'com.h2database:h2'
+
+    // Test
+    testImplementation 'org.springframework.security:spring-security-test'
+    // atms-common 은 Spring Boot 플러그인이 없어 JUnit 실행기 버전을 맞춰 줘야 테스트가 돈다 (테스트 전용, WAR 영향 없음)
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+// 로컬 전용 DB 설정(local-common.yml)은 JEUS WAR 용 빌드(-Pjeus)에서 jar 에 넣지 않는다 — 개발서버는 JNDI (2026-11-02)
+if (project.hasProperty('jeus')) {
+    tasks.named('jar') {
+        exclude 'local-common.yml'
+    }
+}

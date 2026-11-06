@@ -1,0 +1,11 @@
+# =====================================================================
+# atms-if-external — JEUS 배포 (서버 ifex01 :8085, 컨텍스트 '/')
+# WebtoB 가 /api/if/external/ 을 이 서버로 직접 보낸다. atms-journal 은 jeus.url.ifex 로 호출
+# =====================================================================
+spring:
+  config:
+    import: classpath:jeus-common.yml
+
+logging:
+  file:
+    name: ${jeus.log-dir}/atms-if-external.log

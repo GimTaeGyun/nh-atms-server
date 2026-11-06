@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.nh.atms.journal.mapper.IfQueueMapper">
+
+    <resultMap id="rm" type="kr.co.nh.atms.journal.entity.IfQueue" autoMapping="true"/>
+
+    <insert id="insert" parameterType="kr.co.nh.atms.journal.entity.IfQueue"
+            useGeneratedKeys="false" keyProperty="queueSeq">
+        <selectKey keyProperty="queueSeq" resultType="long" order="BEFORE">
+            SELECT SEQ_T_IF_QUEUE.NEXTVAL FROM DUAL
+        </selectKey>
+        INSERT INTO T_IF_QUEUE (
+            QUEUE_SEQ, IF_TARGET, IF_ACTION, TERM_GROUP_ID, TERM_ID,
+            JNL_DATE, JNL_TIME, ERR_CD, PAYLOAD, STATUS, RETRY_CNT, REG_DT
+        ) VALUES (
+            #{queueSeq},
+            #{ifTarget,jdbcType=CHAR},      #{ifAction,jdbcType=VARCHAR},
+            #{termGroupId,jdbcType=CHAR},   #{termId,jdbcType=VARCHAR},
+            #{jnlDate,jdbcType=CHAR},       #{jnlTime,jdbcType=CHAR},
+            #{errCd,jdbcType=VARCHAR},      #{payload,jdbcType=CLOB},
+            'W', 0, CURRENT_TIMESTAMP
+        )
+    </insert>
+
+    <select id="selectPending" resultMap="rm">
+        SELECT QUEUE_SEQ, IF_TARGET, IF_ACTION, TERM_GROUP_ID, TERM_ID,
+               JNL_DATE, JNL_TIME, ERR_CD, PAYLOAD, STATUS, RETRY_CNT,
+               RESULT_CD, RESULT_MSG, REG_DT, SENT_DT
+          FROM T_IF_QUEUE
+         WHERE STATUS = 'W'
+         ORDER BY QUEUE_SEQ
+         OFFSET 0 ROWS FETCH NEXT #{limit} ROWS ONLY
+    </select>
+
+    <update id="updateResult" parameterType="kr.co.nh.atms.journal.entity.IfQueue">
+        UPDATE T_IF_QUEUE
+           SET STATUS     = #{status,jdbcType=CHAR},
+               RESULT_CD  = #{resultCd,jdbcType=VARCHAR},
+               RESULT_MSG = #{resultMsg,jdbcType=VARCHAR},
+               RETRY_CNT  = #{retryCnt,jdbcType=NUMERIC},
+               SENT_DT    = CURRENT_TIMESTAMP
+         WHERE QUEUE_SEQ  = #{queueSeq}
+    </update>
+
+</mapper>

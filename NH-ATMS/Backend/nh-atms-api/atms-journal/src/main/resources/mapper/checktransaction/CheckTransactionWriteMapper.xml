@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.nh.atms.journal.mapper.CheckTransactionWriteMapper">
+
+    <insert id="insert" parameterType="kr.co.nh.atms.journal.entity.CheckTransaction">
+        INSERT /*+ IGNORE_ROW_ON_DUPKEY_INDEX(T_CHECK_TRANSACTION, PK_T_CHECK_TRANSACTION) */
+        INTO T_CHECK_TRANSACTION (
+            TERM_GROUP_ID, TERM_ID, JNL_DATE, JNL_TIME,
+            CHECK_SEQ, CHECK_AMOUNT, BANK_CD, CHECK_NO
+        ) VALUES (
+            #{termGroupId,jdbcType=CHAR},  #{termId,jdbcType=VARCHAR},
+            #{jnlDate,jdbcType=CHAR},      #{jnlTime,jdbcType=CHAR},
+            #{checkSeq,jdbcType=NUMERIC},  #{checkAmount,jdbcType=VARCHAR},
+            #{bankCd,jdbcType=CHAR},       #{checkNo,jdbcType=VARCHAR}
+        )
+    </insert>
+
+</mapper>

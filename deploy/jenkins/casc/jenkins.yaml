@@ -1,0 +1,22 @@
+# =====================================================================
+# Jenkins Configuration as Code — 은행 개발서버용
+#  환경변수(컨테이너 실행 시 주입): JENKINS_ADMIN_ID, JENKINS_ADMIN_PASSWORD, JENKINS_URL
+# =====================================================================
+jenkins:
+  systemMessage: "NH-ATMS CI/CD (bank dev server)"
+  numExecutors: 1
+  securityRealm:
+    local:
+      allowsSignup: false
+      users:
+        - id: "${JENKINS_ADMIN_ID}"
+          password: "${JENKINS_ADMIN_PASSWORD}"
+  authorizationStrategy:
+    loggedInUsersCanDoAnything:
+      allowAnonymousRead: false
+
+unclassified:
+  location:
+    url: "${JENKINS_URL:-http://localhost:8090/}"
+  timestamper:
+    allPipelines: true

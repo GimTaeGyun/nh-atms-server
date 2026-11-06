@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.nh.atms.batch.mapper.BatchJobMapper">
+
+    <resultMap id="BatchJobResultMap" type="kr.co.nh.atms.batch.entity.BatchJob" autoMapping="true"/>
+
+    <sql id="cols">
+        PROC_NAME, JOB_DESC, CRON_EXPR, HOST_NAME, JOB_STATUS,
+        LAST_START_DATE, LAST_START_TIME, LAST_END_DATE, LAST_END_TIME,
+        USE_FLAG, SORT_ORDER, REG_DT, UPD_DT
+    </sql>
+
+    <sql id="searchWhere">
+        <where>
+            <if test="procName != null and procName != ''">
+                AND PROC_NAME LIKE '%' || #{procName} || '%'
+            </if>
+            <if test="jobDesc != null and jobDesc != ''">
+                AND JOB_DESC LIKE '%' || #{jobDesc} || '%'
+            </if>
+            <if test="useFlag != null and useFlag != ''">
+                AND USE_FLAG = #{useFlag}
+            </if>
+            <if test="hostName != null and hostName != ''">
+                AND HOST_NAME LIKE '%' || #{hostName} || '%'
+            </if>
+        </where>
+    </sql>
+
+    <select id="selectList" resultMap="BatchJobResultMap">
+        SELECT <include refid="cols"/>
+        FROM T_BATCH_JOB
+        <include refid="searchWhere"/>
+        ORDER BY SORT_ORDER, PROC_NAME
+        OFFSET #{offset} ROWS FETCH NEXT #{limit} ROWS ONLY
+    </select>
+
+    <select id="countList" resultType="long">
+        SELECT COUNT(*) FROM T_BATCH_JOB
+        <include refid="searchWhere"/>
+    </select>
+
+    <select id="selectByProcName" resultMap="BatchJobResultMap">
+        SELECT <include refid="cols"/>
+        FROM T_BATCH_JOB
+        WHERE PROC_NAME = #{procName}
+    </select>
+
+    <select id="selectEnabled" resultMap="BatchJobResultMap">
+        SELECT <include refid="cols"/>
+        FROM T_BATCH_JOB
+        WHERE USE_FLAG = 'Y'
+        ORDER BY SORT_ORDER, PROC_NAME
+    </select>
+
+    <insert id="insert" parameterType="kr.co.nh.atms.batch.entity.BatchJob">
+        INSERT INTO T_BATCH_JOB (
+            PROC_NAME, JOB_DESC, CRON_EXPR, HOST_NAME, JOB_STATUS,
+            USE_FLAG, SORT_ORDER, REG_DT, UPD_DT
+        ) VALUES (
+            #{procName}, #{jobDesc}, #{cronExpr}, #{hostName}, 'IDLE',
+            #{useFlag}, #{sortOrder}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+        )
+    </insert>
+
+    <update id="update" parameterType="kr.co.nh.atms.batch.entity.BatchJob">
+        UPDATE T_BATCH_JOB
+           SET JOB_DESC   = #{jobDesc},
+               CRON_EXPR  = #{cronExpr},
+               HOST_NAME  = #{hostName},
+               USE_FLAG   = #{useFlag},
+               SORT_ORDER = #{sortOrder},
+               UPD_DT     = CURRENT_TIMESTAMP
+         WHERE PROC_NAME = #{procName}
+    </update>
+
+    <delete id="delete">
+        DELETE FROM T_BATCH_JOB WHERE PROC_NAME = #{procName}
+    </delete>
+
+    <update id="updateRunStart">
+        UPDATE T_BATCH_JOB
+           SET JOB_STATUS      = 'RUNNING',
+               LAST_START_DATE = #{startDate},
+               LAST_START_TIME = #{startTime}
+         WHERE PROC_NAME = #{procName}
+    </update>
+
+    <update id="updateRunEnd">
+        UPDATE T_BATCH_JOB
+           SET JOB_STATUS    = 'IDLE',
+               LAST_END_DATE = #{endDate},
+               LAST_END_TIME = #{endTime}
+         WHERE PROC_NAME = #{procName}
+    </update>
+
+</mapper>

@@ -1,0 +1,11 @@
+# =====================================================================
+# atms-if-internal — JEUS 배포 (서버 ifin01 :8084, 컨텍스트 '/')
+# WebtoB 가 /api/if/internal/ 을 이 서버로 직접 보낸다. atms-journal 은 jeus.url.ifin 으로 호출
+# =====================================================================
+spring:
+  config:
+    import: classpath:jeus-common.yml
+
+logging:
+  file:
+    name: ${jeus.log-dir}/atms-if-internal.log

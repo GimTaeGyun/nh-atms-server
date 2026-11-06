@@ -1,0 +1,11 @@
+// atms-if-external : 대외 인터페이스 (구 atme) - API GW / FOS / 외부 채널
+plugins {
+    id 'org.springframework.boot'
+    id 'io.spring.dependency-management'
+}
+
+dependencies {
+    implementation project(':atms-common')
+    // EIF 고정길이 전문 <-> JSON 변환 (구 atme.lib Converter 이식). 버전은 Spring Boot BOM 관리.
+    implementation 'com.google.code.gson:gson'
+}

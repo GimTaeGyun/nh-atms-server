@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.nh.atms.web.daytotal.mapper.DayTotalMapper">
+
+    <resultMap id="rm" type="kr.co.nh.atms.web.daytotal.entity.DayTotalRow" autoMapping="true"/>
+
+    <sql id="where">
+        <where>
+            <if test="termGroupId != null and termGroupId != ''">
+                AND TERM_GROUP_ID = #{termGroupId}
+            </if>
+            <if test="termId != null and termId != ''">
+                AND TERM_ID = #{termId}
+            </if>
+            <if test="jnlDate != null and jnlDate != ''">
+                AND JNL_DATE = #{jnlDate}
+            </if>
+            <if test="actionType != null and actionType != ''">
+                AND ACTION_TYPE = #{actionType}
+            </if>
+            <if test="totalSrcCd != null and totalSrcCd != ''">
+                AND TOTAL_SRC_CD = #{totalSrcCd}
+            </if>
+            <if test="totalCd != null and totalCd != ''">
+                AND TOTAL_CD = #{totalCd}
+            </if>
+        </where>
+    </sql>
+
+    <!--
+      마감조회: T_DAY_TOTAL 마감항목별 1행.
+      정렬: 최신 마감(일자/시각 DESC) → 원천(host→atm) → 항목코드 순.
+    -->
+    <select id="selectList" resultMap="rm">
+        SELECT TERM_GROUP_ID, TERM_ID, JNL_DATE, JNL_TIME,
+               TOTAL_SRC_CD, TOTAL_CD, TOTAL_VAL, ACTION_TYPE,
+               BEGIN_DATE, BEGIN_TIME, END_DATE, END_TIME
+          FROM T_DAY_TOTAL
+        <include refid="where"/>
+         ORDER BY JNL_DATE DESC, JNL_TIME DESC, TOTAL_SRC_CD ASC, TOTAL_CD ASC
+         OFFSET #{offset} ROWS FETCH NEXT #{limit} ROWS ONLY
+    </select>
+
+    <select id="countList" resultType="long">
+        SELECT COUNT(*)
+          FROM T_DAY_TOTAL
+        <include refid="where"/>
+    </select>
+
+</mapper>

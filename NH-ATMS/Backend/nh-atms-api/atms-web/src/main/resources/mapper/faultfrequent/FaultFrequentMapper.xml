@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.nh.atms.web.faultfrequent.mapper.FaultFrequentMapper">
+
+    <resultMap id="rm" type="kr.co.nh.atms.web.faultfrequent.dto.FaultFrequent" autoMapping="true"/>
+
+    <!-- 장애 판정: 배치 집계와 동일 기준 -->
+    <sql id="faultExpr">
+        (ERR_CD IS NOT NULL AND TRIM(ERR_CD) NOT IN ('0','00','000','0000'))
+    </sql>
+
+    <sql id="where">
+        <where>
+            <if test="termGroupId != null and termGroupId != ''">
+                AND TERM_GROUP_ID = #{termGroupId}
+            </if>
+            <if test="termId != null and termId != ''">
+                AND TERM_ID = #{termId}
+            </if>
+            <if test="fromDate != null and fromDate != ''">
+                AND JNL_DATE &gt;= #{fromDate}
+            </if>
+            <if test="toDate != null and toDate != ''">
+                AND JNL_DATE &lt;= #{toDate}
+            </if>
+        </where>
+    </sql>
+
+    <!--
+      기기별 장애 집계.
+      LAST_FAULT_* 컬럼은 장애 발생 행의 MAX 근사값 (운영 모니터링 용도).
+    -->
+    <select id="selectList" resultMap="rm">
+        SELECT * FROM (
+            SELECT
+                TERM_GROUP_ID                                                       AS TERM_GROUP_ID,
+                TERM_ID                                                             AS TERM_ID,
+                COUNT(*)                                                            AS TOTAL_CNT,
+                SUM(CASE WHEN <include refid="faultExpr"/> THEN 1 ELSE 0 END)        AS FAULT_CNT,
+                ROUND(SUM(CASE WHEN <include refid="faultExpr"/> THEN 1 ELSE 0 END)
+                      * 100.0 / COUNT(*), 2)                                        AS FAULT_RATE,
+                MAX(CASE WHEN <include refid="faultExpr"/> THEN JNL_DATE END)         AS LAST_FAULT_DATE,
+                MAX(CASE WHEN <include refid="faultExpr"/> THEN JNL_TIME END)         AS LAST_FAULT_TIME,
+                MAX(CASE WHEN <include refid="faultExpr"/> THEN ERR_CD END)           AS LAST_ERR_CD
+              FROM T_ATM_MONITOR
+            <include refid="where"/>
+            GROUP BY TERM_GROUP_ID, TERM_ID
+            HAVING SUM(CASE WHEN <include refid="faultExpr"/> THEN 1 ELSE 0 END) &gt;= #{minFaultCnt}
+        ) AGG
+        ORDER BY FAULT_CNT DESC, FAULT_RATE DESC, TERM_GROUP_ID, TERM_ID
+        OFFSET #{offset} ROWS FETCH NEXT #{limit} ROWS ONLY
+    </select>
+
+    <select id="countList" resultType="long">
+        SELECT COUNT(*) FROM (
+            SELECT TERM_GROUP_ID, TERM_ID
+              FROM T_ATM_MONITOR
+            <include refid="where"/>
+            GROUP BY TERM_GROUP_ID, TERM_ID
+            HAVING SUM(CASE WHEN <include refid="faultExpr"/> THEN 1 ELSE 0 END) &gt;= #{minFaultCnt}
+        ) AGG
+    </select>
+
+</mapper>

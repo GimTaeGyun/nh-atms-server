@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.nh.atms.journal.mapper.TransactionJournalWriteMapper">
+
+    <insert id="insert" parameterType="kr.co.nh.atms.journal.entity.TransactionJournal">
+        INSERT /*+ IGNORE_ROW_ON_DUPKEY_INDEX(T_TRANSACTION_JOURNAL, PK_T_TRANSACTION_JOURNAL) */ INTO T_TRANSACTION_JOURNAL (
+            TERM_GROUP_ID, TERM_ID, JNL_DATE, JNL_TIME,
+            TR_NO, TR_TYPE, TR_FROM_ACCOUNT, TR_TO_ACCOUNT,
+            BANK_CD, ACCOUNT_NO, TO_BANK_CD, TO_ACCOUNT_NO,
+            TR_HOST_DATE, TR_HOST_TIME, TR_HOST_NO, TR_HOST_AUDIT_NO,
+            HOST_NET_ID, HOST_SETTLE_DATE, DEPOSIT_NO,
+            SURCHARGE, REQUEST_AMOUNT, DISPENSE_AMOUNT, REMAIN_AMOUNT, AVAIL_AMOUNT,
+            HOST_CASH_AMOUNT, HOST_CHECK_AMOUNT,
+            PROC_COUNT, TR_RESULT, ERR_CD1, ERR_CD2, ERR_CD3,
+            CARD_DATA, NON_CASH_VALUE, NON_CASH_TYPE, TR_MEDIA_CD,
+            MESSAGE, TOTAL_TYPE_CD, TRANSFER_NAME
+        ) VALUES (
+            #{termGroupId,jdbcType=CHAR}, #{termId,jdbcType=VARCHAR},
+            #{jnlDate,jdbcType=CHAR},     #{jnlTime,jdbcType=CHAR},
+            #{trNo,jdbcType=VARCHAR},     #{trType,jdbcType=CHAR},
+            #{trFromAccount,jdbcType=CHAR}, #{trToAccount,jdbcType=CHAR},
+            #{bankCd,jdbcType=CHAR},      #{accountNo,jdbcType=VARCHAR},
+            #{toBankCd,jdbcType=CHAR},    #{toAccountNo,jdbcType=VARCHAR},
+            #{trHostDate,jdbcType=CHAR},  #{trHostTime,jdbcType=CHAR},
+            #{trHostNo,jdbcType=VARCHAR}, #{trHostAuditNo,jdbcType=VARCHAR},
+            #{hostNetId,jdbcType=VARCHAR},#{hostSettleDate,jdbcType=CHAR},
+            #{depositNo,jdbcType=VARCHAR},
+            #{surcharge,jdbcType=NUMERIC},#{requestAmount,jdbcType=NUMERIC},
+            #{dispenseAmount,jdbcType=NUMERIC},#{remainAmount,jdbcType=NUMERIC},
+            #{availAmount,jdbcType=NUMERIC},
+            #{hostCashAmount,jdbcType=NUMERIC},#{hostCheckAmount,jdbcType=NUMERIC},
+            #{procCount,jdbcType=CHAR},   #{trResult,jdbcType=CHAR},
+            #{errCd1,jdbcType=VARCHAR},   #{errCd2,jdbcType=VARCHAR}, #{errCd3,jdbcType=VARCHAR},
+            #{cardData,jdbcType=VARCHAR}, #{nonCashValue,jdbcType=VARCHAR},
+            #{nonCashType,jdbcType=CHAR}, #{trMediaCd,jdbcType=CHAR},
+            #{message,jdbcType=VARCHAR},  #{totalTypeCd,jdbcType=CHAR},
+            #{transferName,jdbcType=VARCHAR}
+        )
+    </insert>
+
+</mapper>

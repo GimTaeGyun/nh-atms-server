@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.nh.atms.journal.mapper.AgentStatusMapper">
+
+    <!-- open: MERGE 기반 upsert.
+         ATM_IP 가 CHAR(15) 고정폭이라 저장값은 공백 패딩됨. 바인드 값(VARCHAR)과
+         비교 시 non-blank-padded 비교가 적용돼 매칭이 실패(→INSERT→PK 위반)하므로
+         CAST(... AS CHAR(15)) 로 양쪽 CHAR 타입을 맞춰 blank-padded 비교가 되게 한다. -->
+    <update id="upsert" parameterType="kr.co.nh.atms.journal.entity.AgentStatus">
+        MERGE INTO T_AGENT_STATUS t
+        USING (SELECT CAST(#{atmIp,jdbcType=CHAR} AS CHAR(15)) AS ATM_IP FROM dual) s
+        ON (t.ATM_IP = s.ATM_IP)
+        WHEN MATCHED THEN UPDATE SET
+            t.AGENT_TYPE      = #{agentType,jdbcType=CHAR},
+            t.TERM_GROUP_ID   = #{termGroupId,jdbcType=CHAR},
+            t.TERM_ID         = #{termId,jdbcType=VARCHAR},
+            t.CONNECT_FLAG    = #{connectFlag,jdbcType=CHAR},
+            t.AGENT_VER       = #{agentVer,jdbcType=CHAR},
+            t.AP_DOWN_VER     = #{apDownVer,jdbcType=CHAR},
+            t.OS_NAME         = #{osName,jdbcType=VARCHAR},
+            t.ATM_MAC_ADDR    = #{atmMacAddr,jdbcType=VARCHAR},
+            t.CONNECT_IP      = #{connectIp,jdbcType=CHAR},
+            t.CONNECT_PORT    = #{connectPort,jdbcType=CHAR},
+            t.JNL_MODE        = #{jnlMode,jdbcType=CHAR},
+            t.CARD_IMAGE      = #{cardImage,jdbcType=CHAR},
+            t.DISPENSER_IMAGE = #{dispenserImage,jdbcType=CHAR},
+            t.CUSTOMER_IMAGE  = #{customerImage,jdbcType=CHAR},
+            t.POLL_CYCLE      = #{pollCycle,jdbcType=CHAR},
+            t.START_DATE      = #{startDate,jdbcType=CHAR},
+            t.START_TIME      = #{startTime,jdbcType=CHAR},
+            t.LAST_POLL_DATE  = #{startDate,jdbcType=CHAR},
+            t.LAST_POLL_TIME  = #{startTime,jdbcType=CHAR},
+            t.UPD_DT          = CURRENT_TIMESTAMP
+        WHEN NOT MATCHED THEN INSERT (
+            ATM_IP, AGENT_TYPE, TERM_GROUP_ID, TERM_ID, CONNECT_FLAG,
+            AGENT_VER, AP_DOWN_VER, OS_NAME, ATM_MAC_ADDR, CONNECT_IP, CONNECT_PORT,
+            JNL_MODE, CARD_IMAGE, DISPENSER_IMAGE, CUSTOMER_IMAGE, POLL_CYCLE,
+            START_DATE, START_TIME, LAST_POLL_DATE, LAST_POLL_TIME, REG_DT, UPD_DT
+        ) VALUES (
+            #{atmIp,jdbcType=CHAR}, #{agentType,jdbcType=CHAR}, #{termGroupId,jdbcType=CHAR},
+            #{termId,jdbcType=VARCHAR}, #{connectFlag,jdbcType=CHAR},
+            #{agentVer,jdbcType=CHAR}, #{apDownVer,jdbcType=CHAR}, #{osName,jdbcType=VARCHAR},
+            #{atmMacAddr,jdbcType=VARCHAR}, #{connectIp,jdbcType=CHAR}, #{connectPort,jdbcType=CHAR},
+            #{jnlMode,jdbcType=CHAR}, #{cardImage,jdbcType=CHAR}, #{dispenserImage,jdbcType=CHAR},
+            #{customerImage,jdbcType=CHAR}, #{pollCycle,jdbcType=CHAR},
+            #{startDate,jdbcType=CHAR}, #{startTime,jdbcType=CHAR},
+            #{startDate,jdbcType=CHAR}, #{startTime,jdbcType=CHAR},
+            CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+        )
+    </update>
+
+    <update id="updateExit">
+        UPDATE T_AGENT_STATUS
+           SET CONNECT_FLAG = '0',
+               EXIT_DATE    = #{exitDate,jdbcType=CHAR},
+               EXIT_TIME    = #{exitTime,jdbcType=CHAR},
+               UPD_DT       = CURRENT_TIMESTAMP
+         WHERE ATM_IP = CAST(#{atmIp,jdbcType=CHAR} AS CHAR(15))
+    </update>
+
+    <update id="updatePoll">
+        UPDATE T_AGENT_STATUS
+           SET LAST_POLL_DATE = #{pollDate,jdbcType=CHAR},
+               LAST_POLL_TIME = #{pollTime,jdbcType=CHAR},
+               CONNECT_FLAG   = '1',
+               UPD_DT         = CURRENT_TIMESTAMP
+         WHERE ATM_IP = CAST(#{atmIp,jdbcType=CHAR} AS CHAR(15))
+    </update>
+
+    <update id="updateJnlMode">
+        UPDATE T_AGENT_STATUS
+           SET JNL_MODE = #{jnlMode,jdbcType=CHAR},
+               UPD_DT   = CURRENT_TIMESTAMP
+         WHERE TERM_GROUP_ID = #{termGroupId,jdbcType=CHAR}
+           AND TERM_ID       = #{termId,jdbcType=VARCHAR}
+    </update>
+
+    <update id="updateRecvOnJournal">
+        UPDATE T_AGENT_STATUS
+           SET LAST_JNL_DATE = SUBSTR(#{jnlDate,jdbcType=CHAR}, 1, 8),
+               LAST_JNL_TIME = SUBSTR(#{jnlTime,jdbcType=CHAR}, 1, 6),
+               UPD_DT        = CURRENT_TIMESTAMP
+         WHERE TERM_GROUP_ID = #{termGroupId,jdbcType=CHAR}
+           AND TERM_ID       = #{termId,jdbcType=VARCHAR}
+    </update>
+
+    <select id="selectByIp" resultType="kr.co.nh.atms.journal.entity.AgentStatus">
+        SELECT ATM_IP, AGENT_TYPE, TERM_GROUP_ID, TERM_ID, CONNECT_FLAG,
+               AGENT_VER, AP_DOWN_VER, OS_NAME, ATM_MAC_ADDR, CONNECT_IP, CONNECT_PORT,
+               JNL_MODE, CARD_IMAGE, DISPENSER_IMAGE, CUSTOMER_IMAGE, POLL_CYCLE,
+               START_DATE, START_TIME, LAST_POLL_DATE, LAST_POLL_TIME, EXIT_DATE, EXIT_TIME
+          FROM T_AGENT_STATUS
+         WHERE ATM_IP = CAST(#{atmIp,jdbcType=CHAR} AS CHAR(15))
+    </select>
+
+</mapper>

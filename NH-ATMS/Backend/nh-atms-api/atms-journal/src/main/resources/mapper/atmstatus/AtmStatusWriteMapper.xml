@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.nh.atms.journal.mapper.AtmStatusWriteMapper">
+
+    <!-- 71 거래 → 최종 거래일시 (없으면 SERVICE_STATUS='00' 으로 신규) -->
+    <update id="touchTransaction">
+        MERGE INTO T_ATM_STATUS t
+        USING (SELECT #{termGroupId,jdbcType=CHAR} AS TG,
+                      #{termId,jdbcType=VARCHAR}  AS TI FROM dual) s
+        ON (t.TERM_GROUP_ID = s.TG AND t.TERM_ID = s.TI)
+        WHEN MATCHED THEN UPDATE SET
+            t.LAST_TR_DATE = #{jnlDate,jdbcType=CHAR},
+            t.LAST_TR_TIME = #{jnlTime,jdbcType=CHAR}
+        WHEN NOT MATCHED THEN INSERT (
+            TERM_GROUP_ID, TERM_ID, SERVICE_STATUS, LAST_TR_DATE, LAST_TR_TIME
+        ) VALUES (
+            #{termGroupId,jdbcType=CHAR}, #{termId,jdbcType=VARCHAR}, '00',
+            #{jnlDate,jdbcType=CHAR}, #{jnlTime,jdbcType=CHAR}
+        )
+    </update>
+
+    <!-- 41 시재 → 최종 현금보충일시 -->
+    <update id="touchAddCash">
+        MERGE INTO T_ATM_STATUS t
+        USING (SELECT #{termGroupId,jdbcType=CHAR} AS TG,
+                      #{termId,jdbcType=VARCHAR}  AS TI FROM dual) s
+        ON (t.TERM_GROUP_ID = s.TG AND t.TERM_ID = s.TI)
+        WHEN MATCHED THEN UPDATE SET
+            t.LAST_ADD_CASH_DATE = #{jnlDate,jdbcType=CHAR},
+            t.LAST_ADD_CASH_TIME = #{jnlTime,jdbcType=CHAR}
+        WHEN NOT MATCHED THEN INSERT (
+            TERM_GROUP_ID, TERM_ID, SERVICE_STATUS, LAST_ADD_CASH_DATE, LAST_ADD_CASH_TIME
+        ) VALUES (
+            #{termGroupId,jdbcType=CHAR}, #{termId,jdbcType=VARCHAR}, '00',
+            #{jnlDate,jdbcType=CHAR}, #{jnlTime,jdbcType=CHAR}
+        )
+    </update>
+
+    <!-- 31 마감 → 최종 일마감일시 -->
+    <update id="touchDayTotal">
+        MERGE INTO T_ATM_STATUS t
+        USING (SELECT #{termGroupId,jdbcType=CHAR} AS TG,
+                      #{termId,jdbcType=VARCHAR}  AS TI FROM dual) s
+        ON (t.TERM_GROUP_ID = s.TG AND t.TERM_ID = s.TI)
+        WHEN MATCHED THEN UPDATE SET
+            t.LAST_DAY_TOTAL_DATE = #{jnlDate,jdbcType=CHAR},
+            t.LAST_DAY_TOTAL_TIME = #{jnlTime,jdbcType=CHAR}
+        WHEN NOT MATCHED THEN INSERT (
+            TERM_GROUP_ID, TERM_ID, SERVICE_STATUS, LAST_DAY_TOTAL_DATE, LAST_DAY_TOTAL_TIME
+        ) VALUES (
+            #{termGroupId,jdbcType=CHAR}, #{termId,jdbcType=VARCHAR}, '00',
+            #{jnlDate,jdbcType=CHAR}, #{jnlTime,jdbcType=CHAR}
+        )
+    </update>
+
+    <!-- 52 운영 → 기기 운영상태 -->
+    <update id="updateServiceStatus">
+        MERGE INTO T_ATM_STATUS t
+        USING (SELECT #{termGroupId,jdbcType=CHAR} AS TG,
+                      #{termId,jdbcType=VARCHAR}  AS TI FROM dual) s
+        ON (t.TERM_GROUP_ID = s.TG AND t.TERM_ID = s.TI)
+        WHEN MATCHED THEN UPDATE SET
+            t.SERVICE_STATUS = #{serviceStatus,jdbcType=CHAR}
+        WHEN NOT MATCHED THEN INSERT (
+            TERM_GROUP_ID, TERM_ID, SERVICE_STATUS
+        ) VALUES (
+            #{termGroupId,jdbcType=CHAR}, #{termId,jdbcType=VARCHAR},
+            #{serviceStatus,jdbcType=CHAR}
+        )
+    </update>
+
+    <!-- 12 개국 → 오늘(initDate) 개국 이력 존재 카운트 (atmr select_count_T_ATMSTATUS) -->
+    <select id="countTodayOpen" resultType="int">
+        SELECT COUNT(1)
+          FROM T_ATM_STATUS
+         WHERE TERM_GROUP_ID = #{termGroupId,jdbcType=CHAR}
+           AND TERM_ID       = #{termId,jdbcType=VARCHAR}
+           AND INIT_DATE     = #{initDate,jdbcType=CHAR}
+    </select>
+
+    <!-- 12 개국 → 개국정보(SERVICE_STATUS='05', INIT_DATE/INIT_TIME, 세션상태) 갱신 (atmr upsert_T_ATMSTATUS) -->
+    <update id="openInit">
+        MERGE INTO T_ATM_STATUS t
+        USING (SELECT #{termGroupId,jdbcType=CHAR} AS TG,
+                      #{termId,jdbcType=VARCHAR}  AS TI FROM dual) s
+        ON (t.TERM_GROUP_ID = s.TG AND t.TERM_ID = s.TI)
+        WHEN MATCHED THEN UPDATE SET
+            t.SERVICE_STATUS     = '05',
+            t.INIT_DATE          = #{initDate,jdbcType=CHAR},
+            t.INIT_TIME          = #{initTime,jdbcType=CHAR},
+            t.ATM_SESSION_STATUS = '1'
+        WHEN NOT MATCHED THEN INSERT (
+            TERM_GROUP_ID, TERM_ID, SERVICE_STATUS,
+            INIT_DATE, INIT_TIME, ATM_SESSION_STATUS
+        ) VALUES (
+            #{termGroupId,jdbcType=CHAR}, #{termId,jdbcType=VARCHAR}, '05',
+            #{initDate,jdbcType=CHAR}, #{initTime,jdbcType=CHAR}, '1'
+        )
+    </update>
+
+    <!-- 21/22 상태·장애 → 서비스상태 + 장애여부 + 에러그룹/에러코드 + 세션상태
+         + 디바이스별 상태(CDU/만/오만/CHK/MCR/SPR/JPR) + 장애발생일시 + 서버수신일시
+         (atmr update_T_ATMSTATUS / update_T_ATMSTATUS_at_ManOman 정합.
+          AS-IS 처럼 서비스상태 외 컬럼은 무조건 덮어쓰기 — null 이면 클리어) -->
+    <update id="updateMonitorStatus">
+        MERGE INTO T_ATM_STATUS t
+        USING (SELECT #{termGroupId,jdbcType=CHAR} AS TG,
+                      #{termId,jdbcType=VARCHAR}  AS TI FROM dual) s
+        ON (t.TERM_GROUP_ID = s.TG AND t.TERM_ID = s.TI)
+        WHEN MATCHED THEN UPDATE SET
+            <trim suffixOverrides=",">
+                <if test="serviceStatus != null">t.SERVICE_STATUS = #{serviceStatus,jdbcType=CHAR},</if>
+                t.ATM_FAULT_STATUS   = #{atmFaultStatus,jdbcType=CHAR},
+                t.OP_FAULT_STATUS    = #{opFaultStatus,jdbcType=CHAR},
+                t.ERR_GROUP_CD       = #{errGroupCd,jdbcType=CHAR},
+                t.ERR_CD             = #{errCd,jdbcType=VARCHAR},
+                t.ATM_SESSION_STATUS = #{sessionStatus,jdbcType=CHAR},
+                t.CDU_STATUS         = #{cduStatus,jdbcType=CHAR},
+                t.MAN_STATUS         = #{manStatus,jdbcType=CHAR},
+                t.OMAN_STATUS        = #{omanStatus,jdbcType=CHAR},
+                t.CHK_STATUS         = #{chkStatus,jdbcType=CHAR},
+                t.MCR_STATUS         = #{mcrStatus,jdbcType=CHAR},
+                t.SPR_STATUS         = #{sprStatus,jdbcType=CHAR},
+                t.JPR_STATUS         = #{jprStatus,jdbcType=CHAR},
+                t.FAULT_ARISED_DATE  = #{faultArisedDate,jdbcType=CHAR},
+                t.FAULT_ARISED_TIME  = #{faultArisedTime,jdbcType=CHAR},
+                t.SVR_RECEIVE_DATE   = TO_CHAR(SYSDATE, 'YYYYMMDD'),
+                t.SVR_RECEIVE_TIME   = TO_CHAR(SYSDATE, 'HH24MISS')
+            </trim>
+        WHEN NOT MATCHED THEN INSERT (
+            TERM_GROUP_ID, TERM_ID, SERVICE_STATUS,
+            ATM_FAULT_STATUS, OP_FAULT_STATUS, ERR_GROUP_CD, ERR_CD,
+            ATM_SESSION_STATUS, CDU_STATUS, MAN_STATUS, OMAN_STATUS,
+            CHK_STATUS, MCR_STATUS, SPR_STATUS, JPR_STATUS,
+            FAULT_ARISED_DATE, FAULT_ARISED_TIME,
+            SVR_RECEIVE_DATE, SVR_RECEIVE_TIME
+        ) VALUES (
+            #{termGroupId,jdbcType=CHAR}, #{termId,jdbcType=VARCHAR},
+            <choose><when test="serviceStatus != null">#{serviceStatus,jdbcType=CHAR}</when><otherwise>'00'</otherwise></choose>,
+            #{atmFaultStatus,jdbcType=CHAR}, #{opFaultStatus,jdbcType=CHAR},
+            #{errGroupCd,jdbcType=CHAR}, #{errCd,jdbcType=VARCHAR},
+            #{sessionStatus,jdbcType=CHAR}, #{cduStatus,jdbcType=CHAR},
+            #{manStatus,jdbcType=CHAR}, #{omanStatus,jdbcType=CHAR},
+            #{chkStatus,jdbcType=CHAR}, #{mcrStatus,jdbcType=CHAR},
+            #{sprStatus,jdbcType=CHAR}, #{jprStatus,jdbcType=CHAR},
+            #{faultArisedDate,jdbcType=CHAR}, #{faultArisedTime,jdbcType=CHAR},
+            TO_CHAR(SYSDATE, 'YYYYMMDD'), TO_CHAR(SYSDATE, 'HH24MISS')
+        )
+    </update>
+
+</mapper>

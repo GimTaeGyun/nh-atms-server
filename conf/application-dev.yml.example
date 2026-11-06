@@ -1,0 +1,41 @@
+# =====================================================================
+# 서버 전용 외부 설정 (컨테이너의 /app/config 로 마운트됨)
+#  - 서버에서: cp conf/application-dev.yml.example config/application-dev.yml
+#             chmod 600 config/application-dev.yml
+#  - Spring Boot 는 작업디렉토리(/app) 기준 ./config/ 를 자동으로 읽어
+#    JAR 내부 application.yml 보다 우선 적용함
+#  - 이 파일(실제값)은 Git 에 커밋하지 않음
+# =====================================================================
+server:
+  port: 8080
+
+spring:
+  datasource:
+    # 환경구성표: dsATMS01 / Service명 NBATMSTP / 계정 ATMS_APP
+    # DB_HOST:PORT 는 DBA 또는 JEUS 데이터소스(dsATMS01) 설정에서 확인
+    url: jdbc:oracle:thin:@//DB_HOST:1521/NBATMSTP
+    username: ATMS_APP
+    password: CHANGE_ME
+    driver-class-name: oracle.jdbc.OracleDriver
+    hikari:
+      maximum-pool-size: 10
+      connection-timeout: 5000
+
+# NH-ATMS 는 jwt.secret 기본값이 없어 미설정 시 기동 실패 (32바이트 이상 랜덤 문자열)
+jwt:
+  secret: CHANGE_ME_32BYTES_OR_MORE_RANDOM_STRING
+
+logging:
+  file:
+    path: /app/logs
+  logback:
+    rollingpolicy:
+      max-file-size: 100MB
+      max-history: 30
+      total-size-cap: 5GB
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

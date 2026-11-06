@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.nh.atms.web.cash.mapper.CashMapper">
+
+    <resultMap id="rm" type="kr.co.nh.atms.web.cash.entity.CashPosition" autoMapping="true"/>
+
+    <sql id="where">
+        <where>
+            <if test="termGroupId != null and termGroupId != ''">
+                AND TERM_GROUP_ID = #{termGroupId}
+            </if>
+            <if test="termId != null and termId != ''">
+                AND TERM_ID = #{termId}
+            </if>
+            <if test="baseDate != null and baseDate != ''">
+                AND JNL_DATE &lt;= #{baseDate}
+            </if>
+        </where>
+    </sql>
+
+    <!--
+      기기시재조회: 카세트(TERM/CASSETTE_TYPE/CASSETTE_NO)별 최신 1건(RN=1)을 현재 시재로 본다.
+      baseDate 가 있으면 해당 일자까지의 최신 시재. AMOUNT = 권종 * 잔량.
+    -->
+    <select id="selectList" resultMap="rm">
+        SELECT *
+          FROM (
+            SELECT TERM_GROUP_ID, TERM_ID, JNL_DATE, JNL_TIME,
+                   CASSETTE_TYPE, CASSETTE_NO, CURRENCY, DENOMINATION, REMAIN_QTY,
+                   (DENOMINATION * REMAIN_QTY) AS AMOUNT,
+                   ROW_NUMBER() OVER (
+                       PARTITION BY TERM_GROUP_ID, TERM_ID, CASSETTE_TYPE, CASSETTE_NO
+                       ORDER BY JNL_DATE DESC, JNL_TIME DESC
+                   ) AS RN
+              FROM T_ADD_CASH
+            <include refid="where"/>
+          ) SNAP
+         WHERE SNAP.RN = 1
+         ORDER BY TERM_GROUP_ID, TERM_ID, CASSETTE_TYPE, CASSETTE_NO
+         OFFSET #{offset} ROWS FETCH NEXT #{limit} ROWS ONLY
+    </select>
+
+    <select id="countList" resultType="long">
+        SELECT COUNT(*)
+          FROM (
+            SELECT ROW_NUMBER() OVER (
+                       PARTITION BY TERM_GROUP_ID, TERM_ID, CASSETTE_TYPE, CASSETTE_NO
+                       ORDER BY JNL_DATE DESC, JNL_TIME DESC
+                   ) AS RN
+              FROM T_ADD_CASH
+            <include refid="where"/>
+          ) SNAP
+         WHERE SNAP.RN = 1
+    </select>
+
+</mapper>

@@ -1,0 +1,23 @@
+# =====================================================================
+# 로컬(PC, bootRun·IntelliJ, 프로파일 local) 공통 DB 접속 — 2026-11-02, PC별 계정 분리 2026-11-05
+#  - 6개 모듈의 application-local.yml 이 spring.config.import 로 읽는다 → DB 주소는 이 파일 한 곳만 고친다
+#  - DB 계정·비밀번호는 PC마다 다르므로 저장소에 두지 않는다 → 각 PC의 D:\local-db.yml (Git·WAR 밖)
+#    D:\local-db.yml 이 없거나 비어 있으면 DB 에 접속하지 않고 기동을 멈춘다 (atms-common LocalDbLoginGuard)
+#    로그인 실패는 D:\db-login-failed 에 기록되어 같은 계정·비번으로 다시 접속하지 않는다 (계정 잠김 방지)
+#  - 우선순위: D:\local-db.yml > 이 파일 > 각 모듈 application-local.yml > application.yml (OS 환경변수·-D 는 더 우선)
+#  - 개발서버(jeus 프로파일)는 JEUS 데이터소스(JNDI dsATMS01)를 쓴다 → jeus-common.yml
+#  - -Pjeus WAR 에는 이 파일이 들어가지 않는다 (atms-common/build.gradle)
+# =====================================================================
+
+spring:
+  config:
+    # PC별 계정 파일 (Git 밖): D:\local-db.yml — 없으면 기동 중단(LocalDbLoginGuard)
+    import: optional:file:D:/local-db.yml
+  datasource:
+    # 은행 개발 DB nbatmsltdb01 (서비스 NBATMSTP, 문자셋 KO16MSWIN949 → orai18n 필요, atms-common/build.gradle)
+    url: jdbc:oracle:thin:@//16.88.250.91:1531/NBATMSTP
+    # 계정·비번은 여기 적지 않는다 → 위 local-db.yml 이 덮어씀
+    username: ""
+    password: ""
+    hikari:
+      initialization-fail-timeout: 1   # 접속 실패 시 재시도 없이 바로 실패

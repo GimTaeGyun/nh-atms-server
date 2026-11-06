@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.nh.atms.journal.mapper.AddCheckWriteMapper">
+
+    <insert id="insert" parameterType="kr.co.nh.atms.journal.entity.AddCheck">
+        INSERT /*+ IGNORE_ROW_ON_DUPKEY_INDEX(T_ADD_CHECK, PK_T_ADD_CHECK) */
+        INTO T_ADD_CHECK (
+            TERM_GROUP_ID, TERM_ID, JNL_DATE, JNL_TIME,
+            ACTION_TYPE, CURRENCY, DENOMINATION,
+            JA_AMOUNT, JA_COUNT, TA_AMOUNT, TA_COUNT,
+            ISSUE_BANK, ISSUE_BRANCH, REG_NO
+        ) VALUES (
+            #{termGroupId,jdbcType=CHAR},   #{termId,jdbcType=VARCHAR},
+            #{jnlDate,jdbcType=CHAR},       #{jnlTime,jdbcType=CHAR},
+            #{actionType,jdbcType=CHAR},
+            #{currency,jdbcType=CHAR},      #{denomination,jdbcType=NUMERIC},
+            #{jaAmount,jdbcType=NUMERIC},   #{jaCount,jdbcType=NUMERIC},
+            #{taAmount,jdbcType=NUMERIC},   #{taCount,jdbcType=NUMERIC},
+            #{issueBank,jdbcType=CHAR},     #{issueBranch,jdbcType=CHAR},
+            #{regNo,jdbcType=VARCHAR}
+        )
+    </insert>
+
+</mapper>

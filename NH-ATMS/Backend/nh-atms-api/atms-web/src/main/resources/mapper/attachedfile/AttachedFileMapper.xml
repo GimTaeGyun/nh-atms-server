@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.nh.atms.web.notice.mapper.AttachedFileMapper">
+
+    <resultMap id="rm" type="kr.co.nh.atms.web.notice.entity.AttachedFile" autoMapping="true"/>
+
+    <select id="selectByNotice" resultMap="rm">
+        SELECT TRIM(CAT_CD) AS CAT_CD, SEQ_NO, FILE_NO,
+               TRIM(ATTACHED_FILE_NAME) AS ATTACHED_FILE_NAME,
+               ATTACHED_FILE_SIZE
+        FROM T_ATTACHED_FILE
+        WHERE TRIM(CAT_CD) = TRIM(#{catCd}) AND SEQ_NO = #{seqNo}
+        ORDER BY FILE_NO
+    </select>
+
+    <select id="nextFileNo" resultType="long">
+        SELECT NVL(MAX(FILE_NO), 0) + 1
+        FROM T_ATTACHED_FILE
+        WHERE TRIM(CAT_CD) = TRIM(#{catCd}) AND SEQ_NO = #{seqNo}
+    </select>
+
+    <insert id="insert" parameterType="kr.co.nh.atms.web.notice.entity.AttachedFile">
+        INSERT INTO T_ATTACHED_FILE (CAT_CD, SEQ_NO, FILE_NO, ATTACHED_FILE_NAME, ATTACHED_FILE_SIZE)
+        VALUES (TRIM(#{catCd}), #{seqNo}, #{fileNo}, TRIM(#{attachedFileName}), #{attachedFileSize})
+    </insert>
+
+    <delete id="delete">
+        DELETE FROM T_ATTACHED_FILE
+        WHERE TRIM(CAT_CD) = TRIM(#{catCd}) AND SEQ_NO = #{seqNo} AND FILE_NO = #{fileNo}
+    </delete>
+
+    <delete id="deleteByNotice">
+        DELETE FROM T_ATTACHED_FILE
+        WHERE TRIM(CAT_CD) = TRIM(#{catCd}) AND SEQ_NO = #{seqNo}
+    </delete>
+
+</mapper>

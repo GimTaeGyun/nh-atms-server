@@ -1,0 +1,364 @@
+/*
+JIF (Journal Interface) : 전자저널 인터페이스
+- charset : cp949(ms949), euc-kr
+*/
+{
+	"#charset#" : "euc-kr"
+
+	,"#jif#" : {
+		 "#head#": {
+			 "#desc#" : "전자저널 해더"
+			,"#type#" : "fixed"
+			,"#field#": [
+				 { "#key#": "len"        , "#len#":  4 , "#dt#": 1          } // 길이                  | len 제외한 길이 | 0001-9999
+				,{ "#key#": "yyyy"       , "#len#":  4                      } // 저널발생일시.년       |
+				,{ "#key#": "mm"         , "#len#":  2                      } // 저널발생일시.월       |
+				,{ "#key#": "dd"         , "#len#":  2                      } // 저널발생일시.일       |
+				,{ "#key#": "hh"         , "#len#":  2                      } // 저널발생일시.시       | 24시
+				,{ "#key#": "mi"         , "#len#":  2                      } // 저널발생일시.분       |
+				,{ "#key#": "ss"         , "#len#":  2                      } // 저널발생일시.초       |
+				,{ "#key#": "fff"        , "#len#":  3                      } // 저널발생일시.밀리초   |
+				,{ "#key#": "flag"       , "#len#":  1                      } // 시구분 Flag           | 동일시간저널인 경우 일련번호 (0~9)
+				,{ "#key#": "bk_cd"      , "#len#":  3                      } // 은행코드              |
+				,{ "#key#": "atm_id"     , "#len#": 20                      } // ATM ID                | 영업점코드(5) + 단말번호(3)
+				,{ "#key#": "jnl_seq"    , "#len#":  5                      } // 저널일련번호          | Host 거래번호 동일 Set
+				,{ "#key#": "jnl_kind"   , "#len#":  2 ,"#body-key#" : true } // 저널형식              | 주:1
+				,{ "#key#": "idx_enc"    , "#len#":  1                      } // idx파일암호화여부     | 0: 평문,1: 암호화성공, 2: 암호화실패
+				,{ "#key#": "jnl_enc"    , "#len#":  1                      } // jnl파일암호화여부     | 0: 평문,1: 암호화성공, 2: 암호화실패
+				,{ "#key#": "enc_key_ver", "#len#":  1                      } // 암호키버전            | 암호화키버전(향후 키변경 시 활용)
+				,{ "#key#": "filler"     , "#len#":  5                      } // 예비                  |
+			]
+			/*
+			주:1]
+				11 : AP START
+				12 : 서비스오픈(개국)
+				21 : 상태저널 : 저널데이터가 반드시 있어야 함
+				22 : 장애저널 (상태저널과 동일형식) 장애저널은 저널데이터가 반드시 있어야 함
+				31 : 마감저널
+				41 : 시재저널
+				52 : 운영(operator function))
+				71 : 거래(Transaction)
+			※ 참고
+			  json -> byte[] 변경시 head.field.len 선택사항
+			*/
+		}
+		,"#body#": {
+			 "00": {}
+
+			,"11": {
+				 "#desc#" : "AP Start : ATM Application 의 기동시작시간을 알려주는 저널."
+				,"#type#" : "delim"
+				,"#sep#"  : "|"
+				,"#dir#"  : "sta"
+				,"#field#": [
+					 { "#key#": "mm"           , "#len#" :  4          } // AP 시작 월          |
+					,{ "#key#": "dd"           , "#len#" :  2          } // AP 시작 일          |
+					,{ "#key#": "yyyy"         , "#len#" :  2          } // AP 시작 년          |
+					,{ "#key#": "hh"           , "#len#" :  2          } // AP 시작 시          | 24시
+					,{ "#key#": "mi"           , "#len#" :  2          } // AP 시작 분          |
+					,{ "#key#": "ss"           , "#len#" :  2          } // AP 시작 초          |
+					,{ "#key#": "devices"      , "#len#" :  2, "#dt#": 1 // Device의 개수
+						,"#field#" : [
+							 { "#key#": "id"       , "#len#" :  1          } // 코드 (코드표 참조)
+							,{ "#key#": "ver1"     , "#len#" : 32          } // 첫번째 Version
+							,{ "#key#": "ver2"     , "#len#" : 32          } // 두번째 Version
+						]
+					}
+				]
+			}
+
+			,"12": {
+				 "#desc#" : "서비스오픈(개국) : 자동기화기기 개/폐국 접속 시간을 알려주는 저널 개국 / 폐국 "
+				,"#type#" : "delim"
+				,"#sep#"  : "|"
+				,"#dir#"  : "sta"
+				,"#field#": [
+					 { "#key#": "mm"          , "#len#" :   2 } // 개/폐국 월             |
+					,{ "#key#": "dd"          , "#len#" :   2 } // 개/폐국 일             |
+					,{ "#key#": "yyyy"        , "#len#" :   4 } // 개/폐국 년             |
+					,{ "#key#": "hh"          , "#len#" :   2 } // 개/폐국 시             | 24시
+					,{ "#key#": "mi"          , "#len#" :   2 } // 개/폐국 분             |
+					,{ "#key#": "ss"          , "#len#" :   2 } // 개/폐국 초             |
+					,{ "#key#": "trx_cd"      , "#len#" :   6 } // transaction code       | 개/폐국 거래코드 (코드표 참조)
+					,{ "#key#": "rs_cd"       , "#len#" :   6 } // result code            | 응답코드
+					,{ "#key#": "pc_cd"       , "#len#" :   1 } // processor code         | "0" 고정
+					,{ "#key#": "vd_cd"       , "#len#" :   2 } // vender code            | 기기회사 (11:효성, 12:청호, 13:FKM, 14:LG)
+					,{ "#key#": "md_no"       , "#len#" :   3 } // model code             | 기기종류 (코드표 참조)
+					,{ "#key#": "sn_no"       , "#len#" :  20 } // atm serial number      | atm 제조일련번호
+					,{ "#key#": "bc_no"       , "#len#" :  20 } // barcode number         | 은행 erp에서 부여한 바코드
+					,{ "#key#": "ap_ver"      , "#len#" :  32 } // ap version             | ap program version
+					,{ "#key#": "des_st"      , "#len#" :   1 } // des status             | 주:1
+					,{ "#key#": "icc_st"      , "#len#" :   1 } // ic card status         | 주:2
+					,{ "#key#": "emv_st"      , "#len#" :   1 } // emv status             | 주:2
+					,{ "#key#": "ir_st"       , "#len#" :   1 } // ir status              | 주:2
+					,{ "#key#": "rf_st"       , "#len#" :   1 } // rf status              | 주:2
+					,{ "#key#": "fp_st"       , "#len#" :   1 } // finger printer status  | 주:2
+					,{ "#key#": "50k_st"      , "#len#" :   1 } // 5만원권 status         | 주:2
+					,{ "#key#": "enc_st"      , "#len#" :   1 } // 암호화 status          | 주:3
+					,{ "#key#": "vd_dt"       , "#len#" : 200 } // atm vender data        | 기기업체 data (개국 시에만 전송)
+					,{ "#key#": "2d_bc"       , "#len#" :   1 } // 2-d 바코드지원여부     | 주:2
+					,{ "#key#": "1000k_check" , "#len#" :   1 } // 백만원수표출금가능여부 | 주:4
+					,{ "#key#": "pb_auto_flip", "#len#" :   1 } // 통장자동넘김지원여부   | 주:4
+					,{ "#key#": "pwd"         , "#len#" :   1 } // 장애우지원여부         | 주:4 , pwd (persons with disabilities)
+					,{ "#key#": "etc_info"    , "#len#" : 200 } // 기타 정보              | IP 20, OS 50, CPU 50, Memory 20, HDD1 정보 10, HDD1 사용량 10, HDD2 정보 10, HDD2 사용량 10, 기기설치 일자 8)
+				]
+				/*
+					주:1]
+					0: 미 장착 & 사용불가
+					1: 장착 & 사용불가 (H/W 초기화 NG)
+					2: 장착 & 사용불가 (Host와 키 교홖 이전상태) or (Host와 키 교홖 NG)
+					3: 장착 & 사용가능
+
+					주:2]
+					0: 미장착
+					1: 장착 & 사용불가능
+					2: 장착 & 사용가능
+
+					주:3]
+					0: 암호화 안됨
+					A: 자체 + SEED 암호화
+					E: 자체 암호화
+					S: SEED 암호와
+					Z: 기타 암호화
+
+					주:4]
+					0: 미지원
+					1: 지원
+				*/
+			}
+
+			,"21": {
+				 "#desc#" : "상태저널 : 자동기화기기의 상태변화"
+				,"#type#" : "delim"
+				,"#sep#"  : "|"
+				,"#dir#"  : "sta"
+				,"#field#": [
+					 { "#key#": "atm_st"        , "#len#" :  2          } // atm status              | atm의 상태, 코드표 참조
+					,{ "#key#": "pc_cnt"        , "#len#" :  1          } // proc count              | 진행카운트
+					,{ "#key#": "bk_ecd"        , "#len#" : 10          } // 은행장애코드            | atm 장애코드 (장애모드일 경우 만)
+					,{ "#key#": "vd_ecd"        , "#len#" : 10          } // 기기업체장애코드        | 각업체로 전달되는 장애코드
+					,{ "#key#": "cash_wth"      , "#len#" :  1          } // 현금출금가능여부        | 0:불가능, 1:가능
+					,{ "#key#": "cash_dep"      , "#len#" :  1          } // 현금입금가능여부        | 상동
+					,{ "#key#": "50k_cash_wth"  , "#len#" :  1          } // 오만현금출금가능여부    | 상동
+					,{ "#key#": "50k_cash_dep"  , "#len#" :  1          } // 오만현금입금가능여부    | 상동
+					,{ "#key#": "check_wth"     , "#len#" :  1          } // 수표출금가능여부        | 상동
+					,{ "#key#": "check_dep"     , "#len#" :  1          } // 수표입금가능여부        | 상동
+					,{ "#key#": "pb_tx"         , "#len#" :  1          } // 통장거래가능여부        | 상동
+					,{ "#key#": "1k_5k_dep"     , "#len#" :  1          } // 천원/오천원입금가능여부 | 상동
+					,{ "#key#": "prev_trx_sq"   , "#len#" :  4          } // 전거래일련번호          | 장애발생 이전 거래일련번호
+					,{ "#key#": "prev_trx_cd"   , "#len#" :  6          } // 전거래코드              | 장애발생 이전 거래코드
+					,{ "#key#": "bk_cd"         , "#len#" :  3          } // 은행코드                |
+					,{ "#key#": "ac_no"         , "#len#" : 32          } // 계좌번호                |
+					,{ "#key#": "tx_amt"        , "#len#" : 15          } // 거래금액                |
+					,{ "#key#": "check_amt"     , "#len#" : 15          } // 수표금액                | 거래금액 중 수표금액
+					,{ "#key#": "devices"       , "#len#" :  2, "#dt#": 1 // device의 개수
+						,"#field#" : [
+							 { "#key#": "id"        , "#len#" :  1          } // id                      | 코드표 참조
+							,{ "#key#": "status"    , "#len#" :  8          } // status                  | 상세상태, 8바이트 고정(바이트별 상태표시)
+						]
+					}
+					,{ "#key#": "cassettes_log" , "#len#" :  2, "#dt#": 1 // logical 권종별 카세트 개수
+						,"#field#" : [
+							 { "#key#": "curr"      , "#len#" :  3          } // currency                | 통화코드 KRW 고정
+							,{ "#key#": "denom"     , "#len#" : 10          } // denomination            | 권종, (만원 : 10000, 천원 : 1000)
+							,{ "#key#": "qty"       , "#len#" :  5          } // bill count              | 개수
+							,{ "#key#": "stat"      , "#len#" :  2          } // status                  | 상태, 코드표 참조
+						]
+					}
+					,{ "#key#": "cassettes_phy" , "#len#" :  2, "#dt#": 1 // physical 권종별 카세트 개수
+						,"#field#" : [
+							 { "#key#": "no"        , "#len#" :  2          } // no                      | 번호
+							,{ "#key#": "curr"      , "#len#" :  3          } // currency                | 통화코드 KRW 고정
+							,{ "#key#": "denom"     , "#len#" : 10          } // denomination            | 권종, (만원 : 10000, 천원 : 1000)
+							,{ "#key#": "qty"       , "#len#" :  5          } // bill count              | 개수
+							,{ "#key#": "stat"      , "#len#" :  2          } // status                  | 상태, 코드표 참조
+						]
+					}
+					,{ "#key#": "checks"        , "#len#" :  2, "#dt#": 1   // 출금 수표의 권종 개수
+						,"#field#" : [
+							 { "#key#": "denom"     , "#len#" : 10          } // denomination            | 권종 (100000, 1000000)
+							,{ "#key#": "curr"      , "#len#" :  3          } // currency                | 통화 코드 KRW
+							,{ "#key#": "qty"       , "#len#" :  5          } // count total             | 매수
+							,{ "#key#": "bgn_no"    , "#len#" : 32          } // check information       | 정보, 수표시작번호
+						]
+					}
+				]
+			}
+
+			,"22": { "#desc#" : "장애저널 : 자동기화기기의 장애변화", "#link#" : "/#jif#/#body#/21" }
+
+			,"31": {
+				 "#desc#" : "마감저널 : 마감실행 (합계/소계) "
+				,"#type#" : "delim"
+				,"#sep#"  : "|"
+				,"#dir#"  : "tot"
+				,"#field#": [
+					 { "#key#": "tot_ty"      , "#len#" :  1          } // 마감 종류           | 5:소계, 6:합계
+					,{ "#key#": "bgn_mm"      , "#len#" :  1          } // 시작 월             |
+					,{ "#key#": "bgn_dd"      , "#len#" :  2          } // 시작 일             |
+					,{ "#key#": "bgn_yyyy"    , "#len#" :  2          } // 시작 년             |
+					,{ "#key#": "bgn_hh"      , "#len#" :  4          } // 시작 시             |
+					,{ "#key#": "bgn_mi"      , "#len#" :  2          } // 시작 분             |
+					,{ "#key#": "bgn_ss"      , "#len#" :  2          } // 시작 초             |
+					,{ "#key#": "end_mm"      , "#len#" :  1          } // 종료 월             |
+					,{ "#key#": "end_dd"      , "#len#" :  2          } // 종료 일             |
+					,{ "#key#": "end_yyyy"    , "#len#" :  2          } // 종료 년             |
+					,{ "#key#": "end_hh"      , "#len#" :  4          } // 종료 시             |
+					,{ "#key#": "end_mi"      , "#len#" :  2          } // 종료 분             |
+					,{ "#key#": "end_ss"      , "#len#" :  2          } // 종료 초             |
+					,{ "#key#": "host_entries", "#len#" :  2, "#dt#": 1 // host 마감 항목 개수 |
+						,"#field#" : [
+							 { "#key#": "cd"      , "#len#" :  4 }          // code                 | 항목 코드, 코드표참조
+							,{ "#key#": "val"     , "#len#" : 15 }          // value                | count : 5자리 , amount : 15자리
+						]
+					}
+					,{ "#key#": "atm_entries" , "#len#" :  2, "#dt#": 1 //  atm 마감 항목 개수  |
+						,"#field#" : [
+							 { "#key#": "cd"      , "#len#" :  4 }          // code                 | 항목 코드, 코드표참조
+							,{ "#key#": "val"     , "#len#" : 15 }          // value                | count : 5자리 , amount : 15자리
+						]
+					}
+				]
+			}
+
+			,"41": {
+				 "#desc#" : "시재저널 : 시재보충정보 저널 (logical/physical 현금/수표 보충정보) "
+				,"#type#" : "delim"
+				,"#sep#"  : "|"
+				,"#dir#"  : "bal"
+				,"#field#": [
+					 { "#key#": "cash_tp"      , "#len#" :  1          } // cash type      | 0:보충, 1:회수, 2:일부보충, 3:일부회수
+					,{ "#key#": "checks"       , "#len#" :  2, "#dt#": 1 // 수표 권종 개수 |
+						,"#field#" : [
+							 { "#key#": "curr"     , "#len#" :  3          } // currency       | 통화코드 “KRW” 고정
+							,{ "#key#": "denom"    , "#len#" : 10          } // denomination   | 권종
+							,{ "#key#": "ja_amt"   , "#len#" : 15          } // ja amount      | 자점 금액
+							,{ "#key#": "ja_cnt"   , "#len#" :  5          } // ja count       | 자점 매수
+							,{ "#key#": "ta_amt"   , "#len#" : 15          } // ta amount      | 타점 금액
+							,{ "#key#": "ta_cnt"   , "#len#" :  5          } // ta count       | 타점 매수
+							,{ "#key#": "iss_bk"   , "#len#" :  3          } // bank           | 발행은행
+							,{ "#key#": "iss_br"   , "#len#" :  5          } // branch         | 발행지점
+							,{ "#key#": "reg_no"   , "#len#" : 32          } // number         | 등록번호
+						]
+					}
+					,{ "#key#": "cassettes_log", "#len#" :  2, "#dt#": 1 // cassette count | logical cassette 개수 (권종별 카세트)
+						,"#field#" : [
+							 { "#key#": "rem_qty"  , "#len#" :  5          } // remaining      | 보충 후 매수
+							,{ "#key#": "add_qty"  , "#len#" :  5          } // addition       | 추가 보충 매수
+							,{ "#key#": "curr"     , "#len#" :  3          } // currency       | 통화코드 “KRW” 고정
+							,{ "#key#": "denom"    , "#len#" : 10          } // denomination   | 권종
+						]
+					}
+					,{ "#key#": "cassettes_phy", "#len#" :  2, "#dt#": 1 // cassette count | physical cassette 개수 (물리적 카세트)
+						,"#field#" : [
+							 { "#key#": "no"       , "#len#" :  2          } // no of cassette | 물리적 카세트 번호 1
+							,{ "#key#": "rem_qty"  , "#len#" :  5          } // remaining      | 보충 후 매수
+							,{ "#key#": "add_qty"  , "#len#" :  5          } // addition       | 추가 보충 매수
+							,{ "#key#": "curr"     , "#len#" :  3          } // currency       | 통화코드 “KRW” 고정
+							,{ "#key#": "denom"    , "#len#" : 10          } // denomination   | 권종
+						]
+					}
+				]
+			}
+
+			,"52": {
+				 "#desc#" : "운영저널 : 기타 운영저널 "
+				,"#type#" : "delim"
+				,"#sep#"  : "|"
+				,"#dir#"  : "opa"
+				,"#field#": [
+					 { "#key#": "op_cd" , "#len#" :   2 } // operator code   | 운영 종류, 코드표 참조
+					,{ "#key#": "op_act", "#len#" : 256 } // operator action | 운영 내용 기술
+				]
+			}
+
+			,"71": {
+				 "#desc#" : "거래저널 : 거래 발생시 거래내용을 기록 "
+				,"#type#" : "delim"
+				,"#sep#"  : "|"
+				,"#dir#"  : "tra"
+				,"#field#": [
+					 { "#key#": "trx_no"        , "#len#" :   4          } // transaction number             | 거래 일련번호
+					,{ "#key#": "trx_cd"        , "#len#" :   6          } // transaction code               | 거래 코드
+					,{ "#key#": "wth_acc"       , "#len#" :   2          } // transaction from account       | 출금 계좌
+					,{ "#key#": "dep_acc"       , "#len#" :   2          } // transaction to account         | 입금 계좌
+					,{ "#key#": "bk_cd"         , "#len#" :   4          } // bank code                      | 은행 코드
+					,{ "#key#": "bk_acc"        , "#len#" :  32          } // bank account (계좌/카드번호)   | 계좌/카드번호
+					,{ "#key#": "trx_bk"        , "#len#" :   4          } // transfer bank code             | 이체 대상 은행 코드
+					,{ "#key#": "trx_acc"       , "#len#" :  32          } // transfer account               | 이체 대상 계좌번호
+					,{ "#key#": "mm"            , "#len#" :   2          } // host date(month)               | 거래 월
+					,{ "#key#": "dd"            , "#len#" :   2          } //.host date(day)                 | 거래 일
+					,{ "#key#": "yyyy"          , "#len#" :   4          } //.host date(year)                | 거래 년도
+					,{ "#key#": "hh"            , "#len#" :   2          } //.host time(hour)                | 거래 시 (24)
+					,{ "#key#": "mi"            , "#len#" :   2          } //.host time(minute)              | 거래 분
+					,{ "#key#": "ss"            , "#len#" :   2          } //.host time(second)              | 거래 초
+					,{ "#key#": "host_ret_no"   , "#len#" :   8          } //.host retrieval number          | 호스트 인증번호
+					,{ "#key#": "host_ait_id"   , "#len#" :   8          } //.host trace audit number        | 추적 감사 번호
+					,{ "#key#": "host_net_id"   , "#len#" :   8          } //.host net id                    | 네트워크 id
+					,{ "#key#": "host_stl_mm"   , "#len#" :   2          } //.host settle date(month)        | 정산 월
+					,{ "#key#": "host_stl_dd"   , "#len#" :   2          } //.host settle date(day)          | 정산 일
+					,{ "#key#": "host_stl_yyyy" , "#len#" :   4          } //.host settle date(year)         | 정산 년도
+					,{ "#key#": "dep_no"        , "#len#" :   8          } //.deposit number                 | 입금 번호
+					,{ "#key#": "fee_amt"       , "#len#" :  15          } //.surcharge amount               | 수수료
+					,{ "#key#": "req_amt"       , "#len#" :  15          } //.request amount                 | 요청 금액
+					,{ "#key#": "trx_amt"       , "#len#" :  15          } //.transaction amount             | 거래 금액
+					,{ "#key#": "rem_amt"       , "#len#" :  15          } //.remain amount                  | 잔액
+					,{ "#key#": "avail_amt"     , "#len#" :  15          } //.available amount               | 출금 가능 잔액
+					,{ "#key#": "proc_cnt"      , "#len#" :   1          } //.proc count                     | 처리 횟수
+					,{ "#key#": "trx_rst"       , "#len#" :   6          } //.transaction result             | 거래 결과
+					,{ "#key#": "err_cd1"       , "#len#" :  10          } //.error code1                    | 오류 코드 1
+					,{ "#key#": "err_cd2"       , "#len#" :  10          } //.error code2                    | 오류 코드 2
+					,{ "#key#": "err_cd3"       , "#len#" :  10          } //.error code3                    | 오류 코드 3
+					,{ "#key#": "ms_data"       , "#len#" : 104          } //.ms data                        | ms 데이터
+					,{ "#key#": "non_cash_val"  , "#len#" :  16          } //.non-cash value                 | 비현금 값
+					,{ "#key#": "non_cash_tp"   , "#len#" :   2          } //.non-cash type                  | 비현금 유형
+					,{ "#key#": "host_msg"      , "#len#" :  64          } //.host message                   | 호스트 메시지
+					,{ "#key#": "media_id"      , "#len#" :   1          } //.media id                       | 매체 id(코드표 참조)
+					,{ "#key#": "close_status"  , "#len#" :   1          } //.마감전후구분                   | 1: 마감전, 2: 마감후
+					,{ "#key#": "host_cash_amt" , "#len#" :  15          } //.host cash amount               | 호스트 현금 잔액
+					,{ "#key#": "host_check_amt", "#len#" :  15          } //.host check amount              | 호스트 수표 잔액
+					,{ "#key#": "trx_cash"      , "#len#" :   2, "#dt#": 1 // denomination transaction count | 입/출금 거래 권종 개수
+						,"#field#": [
+							 { "#key#": "curr"      , "#len#" :   3          } // currency                       | 통화 코드 “krW”고정
+							,{ "#key#": "denom"     , "#len#" :  10          } // denomination                   | 권종 코드
+							,{ "#key#": "qty"       , "#len#" :   5          } // count in transaction           | 매수
+						]
+					}
+					,{ "#key#": "trx_checks"       , "#len#" :   2, "#dt#": 1 // check total count              | 입/출금 수표 권종 개수
+						,"#field#": [
+							 { "#key#": "amt"       , "#len#" :  15          } // check amount                   | 금액
+							,{ "#key#": "bk_cd"     , "#len#" :   4          } // check bankcode                 | 은행코드
+							,{ "#key#": "no"        , "#len#" :  32          } // check number                   | 번호
+						]
+					}
+					,{ "#key#": "cassettes_log" , "#len#" :   2, "#dt#": 1 // cassette count                 | logical cassette 개수 (권종별 카세트)
+						,"#field#" : [
+							 { "#key#": "curr"      , "#len#" :   3          } // currency                       | 통화코드 “KRW” 고정
+							,{ "#key#": "denom"     , "#len#" :  10          } // denomination                   | 권종, (만원 : 10000, 천원 : 1000)
+							,{ "#key#": "qty"       , "#len#" :   5          } // bill count                     | 개수
+							,{ "#key#": "status"    , "#len#" :   2          } // status                         | 상태, 코드표 참조
+						]
+					}
+					,{ "#key#": "cassettes_phy" , "#len#" :   2, "#dt#": 1 // cassette count                 | physical cassette 개수 (물리적 카세트)
+						,"#field#" : [
+							 { "#key#": "no"        , "#len#" :   2          } // no                             | 번호
+							,{ "#key#": "curr"      , "#len#" :   3          } // currency                       | 통화코드 “KRW” 고정
+							,{ "#key#": "denom"     , "#len#" :  10          } // denomination                   | 권종, (맊원 : 10000, 천원 : 1000)
+							,{ "#key#": "qty"       , "#len#" :   5          } // bill count                     | 개수
+							,{ "#key#": "status"    , "#len#" :   2          } // status                         | 상태, 코드표 참조
+						]
+					}
+					,{ "#key#": "atm_checks"    , "#len#" :   2, "#dt#": 1 // no. of atm check deno          | atm 출금 수표의 권종 개수
+						,"#field#" : [
+							 { "#key#": "denom"     , "#len#" :  10          } // denomination                   | 권종, (맊원 : 10000, 천원 : 1000)
+							,{ "#key#": "curr"      , "#len#" :   3          } // currency                       | 통화코드 “KRW” 고정
+							,{ "#key#": "qty"       , "#len#" :   5          } // bill count                     | 개수
+							,{ "#key#": "bgn_no"    , "#len#" :  32          } // check information              | 수표시작번호
+						]
+					}
+					,{ "#key#": "cust_nm"       , "#len#" :  20          } // 고객명                         | 이체(송금), 입금 시 대상 고객명
+				]
+			}
+		}
+	}
+}

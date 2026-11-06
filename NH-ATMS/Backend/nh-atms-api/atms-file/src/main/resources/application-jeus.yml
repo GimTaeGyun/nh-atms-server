@@ -1,0 +1,28 @@
+# =====================================================================
+# atms-file — JEUS 배포 (서버 file01 :8083, 컨텍스트 '/')
+# 화면의 /api/file/ 은 WebtoB 가, ATM 에이전트의 파일 REST(/atmf/)·TCP 소켓(21001)은 L4 가 이 서버로 보낸다
+# =====================================================================
+spring:
+  config:
+    import: classpath:jeus-common.yml
+
+logging:
+  file:
+    name: ${jeus.log-dir}/atms-file.log
+
+# 비동기 명령 결과 콜백 → atms-web
+atmf:
+  remote:
+    msg-async-resp-forward-uri: ${jeus.url.web}/atms/remote-exec/put.msg.resp.do
+  # 에이전트 파일 송수신 TCP 소켓 서버 (구성도 "TCP socket #21001", L4 → file01). jeus 프로파일에서 켬
+  server:
+    enabled: true
+    bind-ip: ${jeus.host}
+    port: 21001
+    repository: ${jeus.data-dir}/atms-repo
+
+file:
+  storage:
+    base-dir: ${jeus.data-dir}/atms-img
+  firmware:
+    repo-dir: ${jeus.data-dir}/atms-firmware

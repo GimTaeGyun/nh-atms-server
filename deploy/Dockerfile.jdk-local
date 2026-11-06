@@ -1,0 +1,19 @@
+# 대안: JRE 이미지가 없고 OS 베이스 이미지(ubi9 / rockylinux 등)만 있는 경우
+#  - 서버의 ${BASE_DIR}/jdk (반입한 jdk-21.0.12_linux 압축해제본) 를 이미지에 복사
+#  - conf/atms.env : DOCKERFILE=Dockerfile.jdk-local, BASE_IMAGE=<OS 이미지>
+ARG BASE_IMAGE=registry.access.redhat.com/ubi9/ubi-minimal:latest
+FROM ${BASE_IMAGE}
+
+COPY jdk/ /opt/jdk/
+
+ENV JAVA_HOME=/opt/jdk \
+    PATH=/opt/jdk/bin:$PATH \
+    TZ=Asia/Seoul \
+    LANG=C.UTF-8 \
+    JAVA_OPTS=""
+
+WORKDIR /app
+COPY app.jar /app/app.jar
+
+EXPOSE 8080
+ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar /app/app.jar"]

@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.nh.atms.web.menu.mapper.MenuMapper">
+
+    <resultMap id="rm" type="kr.co.nh.atms.web.menu.entity.Menu" autoMapping="true"/>
+
+    <sql id="cols">
+        MENU_NO, PARENT_NO, MENU_NAME, MENU_URL, MENU_LEVEL, MENU_ORDER,
+        MENU_ICON, MENU_TYPE, VISIBLE_YN, USE_YN, DESCRIPTION, REG_DT, UPD_DT
+    </sql>
+
+    <select id="selectAccessibleMenusByUserId" resultMap="rm">
+        SELECT DISTINCT <include refid="cols"/>
+          FROM (
+              SELECT m.*
+                FROM T_MENU m
+                JOIN T_AUTH_MENU am       ON m.MENU_NO = am.MENU_NO AND am.USE_YN = 'Y'
+                JOIN T_USER_GROUP_AUTH ga ON am.AUTH_CODE = ga.AUTH_CODE
+                JOIN T_USER u             ON ga.USER_GROUP_NO = u.USER_GROUP_NO
+               WHERE u.USER_ID    = #{userId}
+                 AND u.USE_YN     = 'Y'
+                 AND m.USE_YN     = 'Y'
+                 AND m.VISIBLE_YN = 'Y'
+          )
+         ORDER BY MENU_LEVEL, MENU_ORDER, MENU_NO
+    </select>
+
+    <select id="selectAllActiveMenus" resultMap="rm">
+        SELECT <include refid="cols"/>
+          FROM T_MENU
+         WHERE USE_YN = 'Y'
+         ORDER BY MENU_LEVEL, MENU_ORDER, MENU_NO
+    </select>
+
+    <select id="selectOne" resultMap="rm">
+        SELECT <include refid="cols"/> FROM T_MENU WHERE MENU_NO = #{menuNo}
+    </select>
+
+    <insert id="insert" parameterType="kr.co.nh.atms.web.menu.entity.Menu">
+        <selectKey keyProperty="menuNo" resultType="long" order="BEFORE">
+            SELECT SEQ_T_MENU.NEXTVAL FROM DUAL
+        </selectKey>
+        INSERT INTO T_MENU (
+            MENU_NO, PARENT_NO, MENU_NAME, MENU_URL, MENU_LEVEL, MENU_ORDER,
+            MENU_ICON, MENU_TYPE, VISIBLE_YN, USE_YN, DESCRIPTION, REG_DT, UPD_DT
+        ) VALUES (
+            #{menuNo},
+            #{parentNo, jdbcType=NUMERIC},
+            #{menuName, jdbcType=VARCHAR},
+            #{menuUrl,  jdbcType=VARCHAR},
+            #{menuLevel,jdbcType=NUMERIC},
+            #{menuOrder,jdbcType=NUMERIC},
+            #{menuIcon, jdbcType=VARCHAR},
+            NVL(#{menuType, jdbcType=CHAR}, 'M'),
+            NVL(#{visibleYn, jdbcType=CHAR}, 'Y'),
+            NVL(#{useYn,     jdbcType=CHAR}, 'Y'),
+            #{description, jdbcType=VARCHAR},
+            SYSDATE, SYSDATE
+        )
+    </insert>
+
+    <update id="update" parameterType="kr.co.nh.atms.web.menu.entity.Menu">
+        UPDATE T_MENU
+           SET PARENT_NO   = #{parentNo,  jdbcType=NUMERIC},
+               MENU_NAME   = #{menuName,  jdbcType=VARCHAR},
+               MENU_URL    = #{menuUrl,   jdbcType=VARCHAR},
+               MENU_LEVEL  = #{menuLevel, jdbcType=NUMERIC},
+               MENU_ORDER  = #{menuOrder, jdbcType=NUMERIC},
+               MENU_ICON   = #{menuIcon,  jdbcType=VARCHAR},
+               MENU_TYPE   = #{menuType,  jdbcType=CHAR},
+               VISIBLE_YN  = #{visibleYn, jdbcType=CHAR},
+               USE_YN      = #{useYn,     jdbcType=CHAR},
+               DESCRIPTION = #{description, jdbcType=VARCHAR},
+               UPD_DT      = SYSDATE
+         WHERE MENU_NO = #{menuNo}
+    </update>
+
+    <update id="softDelete">
+        UPDATE T_MENU SET USE_YN = 'N', UPD_DT = SYSDATE WHERE MENU_NO = #{menuNo}
+    </update>
+
+    <select id="countChildren" resultType="int">
+        SELECT COUNT(*) FROM T_MENU
+         WHERE PARENT_NO = #{menuNo} AND USE_YN = 'Y'
+    </select>
+
+    <!-- 상위 메뉴의 권한코드를 신규 메뉴에 복사 (신규 등록 후 사이드바 자동 노출용) -->
+    <insert id="copyAuthMenuFromParent">
+        INSERT INTO T_AUTH_MENU (AUTH_CODE, MENU_NO, USE_YN)
+        SELECT AUTH_CODE, #{menuNo}, 'Y'
+          FROM T_AUTH_MENU
+         WHERE MENU_NO = #{parentNo}
+           AND USE_YN = 'Y'
+    </insert>
+
+</mapper>

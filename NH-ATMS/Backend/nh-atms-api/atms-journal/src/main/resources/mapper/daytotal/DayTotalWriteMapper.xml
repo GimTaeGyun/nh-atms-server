@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.nh.atms.journal.mapper.DayTotalWriteMapper">
+
+    <insert id="insert" parameterType="kr.co.nh.atms.journal.entity.DayTotal">
+        INSERT /*+ IGNORE_ROW_ON_DUPKEY_INDEX(T_DAY_TOTAL, PK_T_DAY_TOTAL) */
+        INTO T_DAY_TOTAL (
+            TERM_GROUP_ID, TERM_ID, JNL_DATE, JNL_TIME,
+            TOTAL_SRC_CD, TOTAL_CD, TOTAL_VAL, ACTION_TYPE,
+            BEGIN_DATE, BEGIN_TIME, END_DATE, END_TIME
+        ) VALUES (
+            #{termGroupId,jdbcType=CHAR},   #{termId,jdbcType=VARCHAR},
+            #{jnlDate,jdbcType=CHAR},       #{jnlTime,jdbcType=CHAR},
+            #{totalSrcCd,jdbcType=CHAR},    #{totalCd,jdbcType=CHAR},
+            #{totalVal,jdbcType=VARCHAR},   #{actionType,jdbcType=CHAR},
+            #{beginDate,jdbcType=CHAR},     #{beginTime,jdbcType=CHAR},
+            #{endDate,jdbcType=CHAR},       #{endTime,jdbcType=CHAR}
+        )
+    </insert>
+
+</mapper>

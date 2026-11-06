@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.nh.atms.web.atmmodel.mapper.AtmModelMapper">
+
+    <resultMap id="AtmModelResultMap" type="kr.co.nh.atms.web.atmmodel.entity.AtmModel" autoMapping="true"/>
+
+    <sql id="cols">
+        MODEL_CD, MODEL_NAME, ATM_CO_CD, ATM_TYPE_CD,
+        LAST_APP_VER, LAST_MWI_VER, JNL_WRITE_MODE, LAST_AGENT_VER, MAX_AMOUNT,
+        DATA_SUPPORTED, SPR_IMG_SUPPORTED, FACE_IMG_SUPPORTED,
+        HAND_IMG_SUPPORTED, MCR_IMG_SUPPORTED,
+        CHK_FRONT_IMG_SUPPORTED, CHK_BACK_IMG_SUPPORTED,
+        AP_LOG_DIR, AGENT_LOG_DIR, JNL_INDEX_DIR,
+        USE_YN, DOWNLOAD_PATH, REMOTE_YN, EXE_FILE_PATH, OS_CD, BANK_MODEL_CD,
+        DOT_SUPPORTED, EARPHONE_SUPPORTED, ZOOM_SUPPORTED, WHEELCHAIR_SUPPORTED
+    </sql>
+
+    <sql id="searchWhere">
+        <where>
+            <if test="modelCd != null and modelCd != ''">
+                AND MODEL_CD LIKE '%' || #{modelCd} || '%'
+            </if>
+            <if test="modelName != null and modelName != ''">
+                AND MODEL_NAME LIKE '%' || #{modelName} || '%'
+            </if>
+            <if test="atmCoCd != null and atmCoCd != ''">
+                AND ATM_CO_CD = #{atmCoCd}
+            </if>
+            <if test="atmTypeCd != null and atmTypeCd != ''">
+                AND ATM_TYPE_CD = #{atmTypeCd}
+            </if>
+            <if test="useYn != null and useYn != ''">
+                AND USE_YN = #{useYn}
+            </if>
+            <!-- DB 값: 1=사용/예, 0=미사용/아니오 -->
+        </where>
+    </sql>
+
+    <select id="selectList" resultMap="AtmModelResultMap">
+        SELECT <include refid="cols"/>
+        FROM T_ATM_MODEL
+        <include refid="searchWhere"/>
+        ORDER BY ATM_CO_CD, MODEL_CD
+        OFFSET #{offset} ROWS FETCH NEXT #{limit} ROWS ONLY
+    </select>
+
+    <select id="countList" resultType="long">
+        SELECT COUNT(*) FROM T_ATM_MODEL
+        <include refid="searchWhere"/>
+    </select>
+
+    <select id="selectOne" resultMap="AtmModelResultMap">
+        SELECT <include refid="cols"/>
+        FROM T_ATM_MODEL
+        WHERE MODEL_CD = #{modelCd}
+    </select>
+
+    <insert id="insert" parameterType="kr.co.nh.atms.web.atmmodel.entity.AtmModel">
+        INSERT INTO T_ATM_MODEL (
+            MODEL_CD, MODEL_NAME, ATM_CO_CD, ATM_TYPE_CD,
+            LAST_APP_VER, LAST_MWI_VER, JNL_WRITE_MODE, LAST_AGENT_VER, MAX_AMOUNT,
+            DATA_SUPPORTED, SPR_IMG_SUPPORTED, FACE_IMG_SUPPORTED,
+            HAND_IMG_SUPPORTED, MCR_IMG_SUPPORTED,
+            CHK_FRONT_IMG_SUPPORTED, CHK_BACK_IMG_SUPPORTED,
+            AP_LOG_DIR, AGENT_LOG_DIR, JNL_INDEX_DIR,
+            USE_YN, DOWNLOAD_PATH, REMOTE_YN, EXE_FILE_PATH, OS_CD, BANK_MODEL_CD,
+            DOT_SUPPORTED, EARPHONE_SUPPORTED, ZOOM_SUPPORTED, WHEELCHAIR_SUPPORTED
+        ) VALUES (
+            #{modelCd}, #{modelName}, #{atmCoCd}, #{atmTypeCd},
+            #{lastAppVer}, #{lastMwiVer}, #{jnlWriteMode}, #{lastAgentVer}, #{maxAmount},
+            #{dataSupported}, #{sprImgSupported}, #{faceImgSupported},
+            #{handImgSupported}, #{mcrImgSupported},
+            #{chkFrontImgSupported}, #{chkBackImgSupported},
+            #{apLogDir}, #{agentLogDir}, #{jnlIndexDir},
+            #{useYn}, #{downloadPath}, #{remoteYn}, #{exeFilePath}, #{osCd}, #{bankModelCd},
+            #{dotSupported}, #{earphoneSupported}, #{zoomSupported}, #{wheelchairSupported}
+        )
+    </insert>
+
+    <update id="update" parameterType="kr.co.nh.atms.web.atmmodel.entity.AtmModel">
+        UPDATE T_ATM_MODEL
+        <set>
+            <if test="modelName != null">MODEL_NAME = #{modelName},</if>
+            <if test="atmCoCd != null">ATM_CO_CD = #{atmCoCd},</if>
+            <if test="atmTypeCd != null">ATM_TYPE_CD = #{atmTypeCd},</if>
+            <if test="lastAppVer != null">LAST_APP_VER = #{lastAppVer},</if>
+            <if test="lastMwiVer != null">LAST_MWI_VER = #{lastMwiVer},</if>
+            <if test="jnlWriteMode != null">JNL_WRITE_MODE = #{jnlWriteMode},</if>
+            <if test="lastAgentVer != null">LAST_AGENT_VER = #{lastAgentVer},</if>
+            <if test="maxAmount != null">MAX_AMOUNT = #{maxAmount},</if>
+            <if test="dataSupported != null">DATA_SUPPORTED = #{dataSupported},</if>
+            <if test="sprImgSupported != null">SPR_IMG_SUPPORTED = #{sprImgSupported},</if>
+            <if test="faceImgSupported != null">FACE_IMG_SUPPORTED = #{faceImgSupported},</if>
+            <if test="handImgSupported != null">HAND_IMG_SUPPORTED = #{handImgSupported},</if>
+            <if test="mcrImgSupported != null">MCR_IMG_SUPPORTED = #{mcrImgSupported},</if>
+            <if test="chkFrontImgSupported != null">CHK_FRONT_IMG_SUPPORTED = #{chkFrontImgSupported},</if>
+            <if test="chkBackImgSupported != null">CHK_BACK_IMG_SUPPORTED = #{chkBackImgSupported},</if>
+            <if test="apLogDir != null">AP_LOG_DIR = #{apLogDir},</if>
+            <if test="agentLogDir != null">AGENT_LOG_DIR = #{agentLogDir},</if>
+            <if test="jnlIndexDir != null">JNL_INDEX_DIR = #{jnlIndexDir},</if>
+            <if test="useYn != null">USE_YN = #{useYn},</if>
+            <if test="downloadPath != null">DOWNLOAD_PATH = #{downloadPath},</if>
+            <if test="remoteYn != null">REMOTE_YN = #{remoteYn},</if>
+            <if test="exeFilePath != null">EXE_FILE_PATH = #{exeFilePath},</if>
+            <if test="osCd != null">OS_CD = #{osCd},</if>
+            <if test="bankModelCd != null">BANK_MODEL_CD = #{bankModelCd},</if>
+            <if test="dotSupported != null">DOT_SUPPORTED = #{dotSupported},</if>
+            <if test="earphoneSupported != null">EARPHONE_SUPPORTED = #{earphoneSupported},</if>
+            <if test="zoomSupported != null">ZOOM_SUPPORTED = #{zoomSupported},</if>
+            <if test="wheelchairSupported != null">WHEELCHAIR_SUPPORTED = #{wheelchairSupported},</if>
+        </set>
+        WHERE MODEL_CD = #{modelCd}
+    </update>
+
+    <delete id="delete">
+        DELETE FROM T_ATM_MODEL WHERE MODEL_CD = #{modelCd}
+    </delete>
+
+</mapper>

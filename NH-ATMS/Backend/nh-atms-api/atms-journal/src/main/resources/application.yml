@@ -1,0 +1,127 @@
+server:
+  port: 8081
+  servlet:
+    context-path: /
+
+spring:
+  application:
+    name: atms-journal
+  profiles:
+    active: local
+    # local  → 로컬 IntelliJ 기본값 (application-local.yml 함께 로드)
+    # dev    → Docker Compose: SPRING_PROFILES_ACTIVE=dev 환경변수가 이 값을 덮어씀
+    # prod   → CI/CD 배포 시 Jenkins Credentials에서 주입
+
+  # Oracle 19C — atms-web 과 동일 DB 공유
+  # 접속 정보는 환경변수로 주입 (로컬: .env, Docker: docker-compose, CI: Jenkins Credentials)
+  datasource:
+    url:      ${SPRING_DATASOURCE_URL:jdbc:oracle:thin:@//192.168.28.21:1521/ATMSPDB}
+    driver-class-name: oracle.jdbc.OracleDriver
+    username: ${SPRING_DATASOURCE_USERNAME:ATMS}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    # password 기본값 없음 → 환경변수 미설정 시 앱 구동 실패 (의도적 안전장치)
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 30000
+      pool-name: AtmsJournalHikariCP
+      connection-init-sql: "ALTER SESSION SET TIME_ZONE = 'Asia/Seoul'"
+
+  # ── 저널 스트리밍 (Kafka → Elasticsearch) — atms.stream.* 플래그가 꺼져 있으면(기본) 접속 시도 없음
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:19092}
+    producer:
+      acks: all
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+    consumer:
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      auto-offset-reset: earliest
+  elasticsearch:
+    uris: ${ELASTICSEARCH_URIS:http://localhost:19200}
+    connection-timeout: 3s
+    socket-timeout: 10s
+
+# 저널 스트리밍 파이프라인 (수신→DB저장 성공 후 Kafka 발행 → 컨슈머가 ES 일별 인덱스 색인)
+# 기본 false: 로컬/기존 환경 동작 불변. docker-compose 가 환경변수로 활성화.
+atms:
+  stream:
+    kafka:
+      enabled: ${ATMS_KAFKA_ENABLED:false}
+      topic: atms.journal.received
+      partitions: 12        # 5,500대 기기 key 해싱 분산 기준
+      replicas: 1           # 운영 클러스터에서는 3 권장
+    elasticsearch:
+      enabled: ${ATMS_ES_ENABLED:false}
+      index-prefix: atms-journal
+
+mybatis:
+  mapper-locations: classpath:mapper/**/*.xml
+  type-aliases-package: kr.co.nh.atms.journal
+  configuration:
+    map-underscore-to-camel-case: true
+    default-fetch-size: 100
+    jdbc-type-for-null: VARCHAR
+
+jwt:
+  secret: ${JWT_SECRET}
+  # 기본값 없음 → 환경변수 미설정 시 앱 구동 실패 (의도적 안전장치)
+  access-token-validity: 3600000
+  refresh-token-validity: 86400000
+
+logging:
+  level:
+    kr.co.nh.atms: DEBUG
+    p6spy: INFO
+
+sso:
+  provider: local
+
+# atms-journal 전용 설정
+journal:
+  receive:
+    max-payload-size: 1048576
+    unknown-kind-policy: SKIP    # SKIP | ERROR
+  hmac:
+    enabled: false                                 # dev=false, staging/prod=true 권장
+    secret: ${JOURNAL_HMAC_SECRET:nh-atms-journal-dev-hmac-secret-change-me}
+    key-id: ${JOURNAL_HMAC_KEY_ID:default}
+    clock-skew-seconds: 300                        # 재전송 방지 (±5분)
+
+  # 저널 에러 재처리 워커 (atmr 1-E)
+  error-retry:
+    enabled: ${JOURNAL_ERROR_RETRY_ENABLED:false}  # dev 기본 off
+    fixed-delay: 60000                             # 폴링 주기(ms)
+    batch-size: 50                                 # 1회 처리 건수
+    max-retry: 3                                   # 최대 재시도
+
+# 대내/대외 IF 비동기 큐 (atmr 1-D)
+if:
+  queue:
+    internal-base-url: ${IF_INTERNAL_BASE_URL:http://localhost:8084}
+    external-base-url: ${IF_EXTERNAL_BASE_URL:http://localhost:8085}
+    worker:
+      enabled: ${IF_QUEUE_WORKER_ENABLED:false}    # dev 기본 off, IF 서비스 기동 후 true
+      fixed-delay: 5000                            # 폴링 주기(ms)
+      batch-size: 20                               # 1회 처리 건수
+      max-retry: 3                                 # 최대 재시도
+    notify:                                        # 장애 통보 기본 수신처 (콤마 구분 목록)
+      # NH 운영자/담당자 매핑 규칙 확정 전 임시값 — 확정 후 T_USER 계열 조회로 대체 예정
+      sms-phones: ${IF_NOTIFY_SMS_PHONES:0000000000}
+      messenger-users: ${IF_NOTIFY_MESSENGER_USERS:ATMS_OP}
+
+# 에이전트 open 응답에 통보할 서버 접속 정보 (레거시 atmr atms/atmf/ping 블록)
+# 실제 배포 IP/포트는 환경변수로 주입 (host 미설정 시 빈 문자열 → 운영 전 반드시 설정)
+agent:
+  atms:                                            # 저널 수신 서버(atms-journal)
+    host: ${AGENT_ATMS_HOST:}
+    port: ${AGENT_ATMS_PORT:8081}
+    schema: ${AGENT_ATMS_SCHEMA:https}
+  atmf:                                            # 파일전송 서버(atms-file)
+    host: ${AGENT_ATMF_HOST:}
+    port: ${AGENT_ATMF_PORT:8083}
+  ping:
+    url: ${AGENT_PING_URL:/api/agent/ping}         # 폴링 엔드포인트
+  ap:
+    repository: ${AGENT_AP_REPOSITORY:}            # AP 배포본 저장소 루트 (T_DOWNLOAD_SERVER.FILE_PATH 상대화 기준)

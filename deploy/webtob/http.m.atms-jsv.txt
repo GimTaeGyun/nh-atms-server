@@ -1,0 +1,51 @@
+# =====================================================================
+# WebtoB(nbatmsltwb01, 5.0.0.4) http.m 추가 블록 — NH-ATMS JEUS 매니지드 서버 6개 연동 (2026-10-26 구성)
+#   대상 파일: /WEBTOB/webtobATMS/config/http.m (webatms 소유, WebtoB 담당 또는 root 작업일 ROOT_DAY 2-13)
+#   이 파일은 "붙여 넣을 내용" 이다 — 파일 통째로 교체하지 않는다
+#
+#   1) *SERVER 이름 = JEUS 쪽 WebtoB 커넥터의 registration-id (같아야 연결됨)
+#      아래는 서버 이름과 같다고 가정. WAS 담당이 다른 id 를 정했으면 *SERVER 와 *URI 의 SvrName 을 함께 바꾼다
+#   2) *NODE 에 JSVPORT = 19000 이 있어야 함 (2026-10-15 :19000 LISTEN 확인 → 있을 가능성 높음)
+#   3) 이미 JSV 서버그룹이 있으면 *SVRGROUP 은 넣지 않고 그 그룹 이름을 SvgName 에 (*NODE 는 기존 항목 확인용, 통째로 붙이지 않음)
+#   4) *URI 는 구체적인 경로를 위에 (/api/journal/ 이 /api/ 보다 먼저). DOCROOT·기존 URI·오류 페이지는 그대로
+#   5) MinProc/MaxProc 은 예시 — 담당 기준
+#   적용: (webatms) wscfl -i http.m → wsdown -i → wsboot
+#   확인: ss -tn | grep 19000 에 16.88.122.113 ESTAB (서버당 연결 수는 커넥터 설정에 따라 여러 줄),
+#         모듈 경로(/api/journal/ 등)가 302·503 이 아니면 그 서버까지 연결,
+#         curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:9000/v3/api-docs → 200
+# =====================================================================
+
+# --- *NODE : 기존 노드 항목에 아래 값이 있는지만 확인 (없는 항목만 추가, 나머지 기존 값 유지)
+#     노드 이름은 hostname 과 같아야 함 (nbatmsltwb01)
+*NODE
+nbatmsltwb01    WEBTOBDIR = "/WEBTOB/webtobATMS",      # 기존 값 유지
+                DOCROOT   = "/home/atmswas/docs",       # 확인된 DocBase — 바꾸지 않음 (배포가 이 폴더를 통째로 교체)
+                PORT      = "9000",                     # 기존 값 유지
+                JSVPORT   = 19000                       # JEUS 커넥터 6개가 접속 (없으면 추가)
+                # ... 그 밖의 기존 항목(SHMKEY, HTH, LOGGING, ERRORDOCUMENT 등)은 그대로
+
+*SVRGROUP
+atms_jsvg       NodeName = "nbatmsltwb01", SvrType = JSV
+
+*SERVER
+atms01     SvgName = atms_jsvg, MinProc = 2, MaxProc = 10    # atms-web          :8080
+ajou01    SvgName = atms_jsvg, MinProc = 2, MaxProc = 10    # atms-journal      :8081
+abat01      SvgName = atms_jsvg, MinProc = 1, MaxProc = 5     # atms-batch        :8082
+file01       SvgName = atms_jsvg, MinProc = 2, MaxProc = 10    # atms-file         :8083
+ifin01       SvgName = atms_jsvg, MinProc = 1, MaxProc = 5     # atms-if-internal  :8084
+ifex01       SvgName = atms_jsvg, MinProc = 1, MaxProc = 5     # atms-if-external  :8085
+
+*URI
+uri_journal     Uri = "/api/journal/",     Svrtype = JSV, SvrName = ajou01
+uri_agent       Uri = "/api/agent/",       Svrtype = JSV, SvrName = ajou01
+uri_batch       Uri = "/api/batch/",       Svrtype = JSV, SvrName = abat01
+uri_file        Uri = "/api/file/",        Svrtype = JSV, SvrName = file01
+uri_atmf        Uri = "/atmf/",            Svrtype = JSV, SvrName = file01
+uri_ifin        Uri = "/api/if/internal/", Svrtype = JSV, SvrName = ifin01
+uri_ifex        Uri = "/api/if/external/", Svrtype = JSV, SvrName = ifex01
+uri_api         Uri = "/api/",             Svrtype = JSV, SvrName = atms01
+uri_atms        Uri = "/atms/",            Svrtype = JSV, SvrName = atms01
+uri_atmr        Uri = "/atmr/",            Svrtype = JSV, SvrName = atms01
+uri_swagger     Uri = "/swagger-ui/",      Svrtype = JSV, SvrName = atms01
+uri_apidocs     Uri = "/v3/api-docs",      Svrtype = JSV, SvrName = atms01
+uri_actuator    Uri = "/actuator/",        Svrtype = JSV, SvrName = atms01

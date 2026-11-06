@@ -1,0 +1,17 @@
+// atms-if-internal : 대내 인터페이스 (구 atmi) - EAI/계정계 등
+plugins {
+    id 'org.springframework.boot'
+    id 'io.spring.dependency-management'
+}
+
+dependencies {
+    implementation project(':atms-common')
+    // 대내(EAI) 고정길이 전문 <-> JSON 변환 (구 atmi.lib 이식). 버전은 Spring Boot BOM 관리.
+    implementation 'com.google.code.gson:gson'
+}
+
+test {
+    useJUnitPlatform()
+    systemProperty 'file.encoding', 'UTF-8'
+    jvmArgs '-Dfile.encoding=UTF-8', '-Dsun.jnu.encoding=UTF-8'
+}

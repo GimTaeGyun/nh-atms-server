@@ -1,0 +1,287 @@
+﻿구분,PDF_Entity명,정규화후보_T명,ERD_ASIS분석_매칭테이블,컬럼확보,현행48종_매칭,비고
+관리계열,STM호퍼현황,T_STMHOPPER,,N,,STM 매체/호퍼
+관리계열,인수도요청 Queue,T_HANDOVER_QUEUE,,N,,인수도 요청 큐
+관리계열,ATM시재(운영),T_ATMCASH_OPER,,N,,시재 운영(중복표기)
+관리계열,ATM시재관리,T_ATMCASH_MNG,,N,,시재 관리(중복표기)
+관리계열,ATM시재이력,T_ATMCASH_HIST,,N,,시재 이력(중복표기)
+관리계열,BASEFRAME서비스상태(감시),T_BASEFRAME_SVC_STATUS,,N,,감시
+관리계열,BASEFRAME인스턴스상태(감시),T_BASEFRAME_INST_STATUS,,N,,감시
+관리계열,BATCHJOBLOG,T_BATCHJOBLOG,,N,T_BATCHHISTORY,배치 로그
+관리계열,BMS통신상태정보,T_BMS_COMM_STATUS,,N,,BMS 통신
+관리계열,BP기본정보,T_BP_INFO,자동화기기_BP라우팅정보,Y,,BP 라우팅(#53)
+관리계열,I_USER,T_I_USER,,N,T_USER,사용자
+관리계열,PNI_등급,T_PNI_GRADE,,N,,PNI 등급
+관리계열,SRC단말/자동기구분코드,T_SRC_TERMTYPE_CODE,,N,,단말/자동기 구분코드
+관리계열,TB_EMR_HIST,T_EMR_HIST,,N,,긴급(EMR) 이력
+관리계열,TB_NMS_ERR_RISK,T_NMS_ERR_RISK,,N,,NMS 에러 위험도
+관리계열,TB_OP_ATM_LARGECHK_ERR,T_OP_ATM_LARGECHK_ERR,,N,,거액수표 오류
+관리계열,TB_OP_ATM_STAT과I_GEN동기화용Table,T_OP_ATM_STAT_GEN_SYNC,,N,,STAT-GEN 동기화
+관리계열,TB_RECORD_COUNT,T_RECORD_COUNT,,N,,레코드 건수
+관리계열,TB_SCRT_SCHEDULE,T_SCRT_SCHEDULE,,N,,현송 스케줄
+관리계열,TB_SCRT_TMP_OPER,T_SCRT_TMP_OPER,,N,,현송 임시운영
+관리계열,TB_WAS_ACCESS_LOG,T_WAS_ACCESS_LOG,,N,,WAS 접근로그
+관리계열,UMS메시지,T_UMS_MESSAGE,자동화기기_문자내용,Y,T_SMSSENDDATA,문자/UMS(#65)
+관리계열,강제마감전문싱크,T_FORCECLOSE_MSG_SYNC,,N,,강제마감 전문 싱크
+관리계열,거래복구,T_TRANS_RECOVERY,,N,,거래 복구
+관리계열,거래복구요청이력,T_TRANS_RECOVERY_HIST,,N,,거래 복구 요청 이력
+관리계열,거래상세정보,T_TRANS_DETAIL,자동화기기_거래,Y,T_TRANSACTIONJOURNAL,메인거래(#1 60+컬럼)
+관리계열,거래집계,T_TRANS_AGG,자동화기기_집계,Y,,거래 집계(#45)
+관리계열,거래총계,T_TRANS_TOTAL,,N,T_DAYTOTAL,거래 총계
+관리계열,경비업체장애관리,T_GUARD_FAULT_MNG,,N,,경비업체 장애
+관리계열,경비업체처리번호채번,T_GUARD_PROC_SEQ,,N,,경비업체 처리번호
+관리계열,고객거래정보,T_CUST_TRANS,,N,,고객 거래
+관리계열,고객원장,T_CUST_LEDGER,,N,,고객 원장
+관리계열,고객정보조회,T_CUST_INFO_VIEW,,N,,고객 정보
+관리계열,공과금합계거래,T_UTILITY_TOTAL,자동화기기_공과금수납기거래합계,Y,,공과금 합계(#12)
+관리계열,공통코드,T_CODE,자동화기기_코드마스터,Y,T_CODE,공통코드(#48)
+관리계열,공통코드구분,T_CODEGROUP,자동화기기_코드마스터,Y,T_CODEGROUP,코드 구분
+관리계열,기기_가동율_이력,T_DEVICE_OPRATE_HIST,,N,T_DEVICEOPRATEHIST(V1.3.0),가동율 이력
+관리계열,기기_마지막_장애_정보,T_DEVICE_LASTFAULT,,N,,마지막 장애
+관리계열,기기_장애_이력,T_DEVICE_FAULT_HIST,,N,T_DEVICEFAULTHIST(V1.3.0),장애 이력
+관리계열,기기모델코드,T_DEVICE_MODEL_CODE,,N,,기기 모델코드
+관리계열,기기별_용역료산정,T_DEVICE_SVCFEE,,N,T_SERVICEFEECALC(V1.3.0),기기별 용역료
+관리계열,기기운영관리,T_DEVICE_OPER_MNG,자동화기기_기기정보(ATM),Y,T_ATM,기기 마스터(#27)
+관리계열,기타가감용역료,T_ETC_SVCFEE_ADJ,,N,,기타 가감 용역료
+관리계열,대응메모이력,T_RESPONSE_MEMO_HIST,,N,,대응 메모
+관리계열,마감_내역,T_CLOSE_DETAIL,,N,,마감 내역
+관리계열,메시지LOG,T_MESSAGE_LOG,,N,,메시지 로그
+관리계열,메시지송신,T_MESSAGE_SEND,자동화기기_문자내용,Y,T_SMSSENDDATA,메시지 송신(#65)
+관리계열,명세표오류코드,T_SLIP_ERR_CODE,자동화기기_ATM에러메세지,Y,,에러 메시지(#52)
+관리계열,미가동_사유_관리,T_NONOP_REASON,,N,T_NONOPREASON(V1.3.0),미가동 사유
+관리계열,미처리_금액_보고서,T_UNPROC_AMT_REPORT,,N,,미처리 금액 보고서
+관리계열,미처리금액,T_UNPROC_AMT,,N,,미처리 금액
+관리계열,민원_이력,T_COMPLAINT_HIST,,N,,민원 이력
+관리계열,보수업체월별출동현황통계,T_VENDOR_DISPATCH_MON,,N,,보수업체 월별 출동
+관리계열,보수업체일별출동현황통계,T_VENDOR_DISPATCH_DAY,,N,,보수업체 일별 출동
+관리계열,보수업체장애정보,T_VENDOR_FAULT_INFO,,N,,보수업체 장애정보
+관리계열,보수업체장애처리번호,T_VENDOR_FAULT_SEQ,,N,,보수업체 처리번호
+관리계열,보수업체접수정보,T_VENDOR_RECEIPT,,N,,보수업체 접수
+관리계열,보수업체조치정보,T_VENDOR_ACTION,,N,,보수업체 조치
+관리계열,사무소 코드,T_BRANCH_CODE,자동화기기_사무소등록관리,Y,T_BRANCH,사무소 코드(#25)
+관리계열,사무소등록관리,T_BRANCH,자동화기기_사무소등록관리,Y,T_BRANCH,사무소 마스터(#25 70+컬럼)
+관리계열,사무소코드(지역시군코드),T_BRANCH_REGION_CODE,,N,,지역/시군 코드
+관리계열,사용자정보,T_USER,자동화기기_인사정보,Y,T_USER,사용자/인사(#58)
+관리계열,상세코드,T_CODE_DETAIL,자동화기기_상세코드,Y,T_CODE,상세코드(#49)
+관리계열,상태전문_용역응답_이력,T_STATUS_SVC_RESP_HIST,,N,,상태전문 용역응답
+관리계열,서버상태(감시),T_SERVER_STATUS,,N,,서버 상태 감시
+관리계열,설치위치/업체관리ID매칭코드,T_LOC_VENDOR_MATCH,,N,,위치-업체 매칭
+관리계열,설치위치/업체관리ID매칭코드사용이력,T_LOC_VENDOR_MATCH_HIST,,N,,위치-업체 매칭 이력
+관리계열,세션관리,T_SESSION,,N,,세션 관리
+관리계열,세션관리세부정보,T_SESSION_DETAIL,,N,,세션 세부
+관리계열,세션업무구분,T_SESSION_BIZTYPE,,N,,세션 업무구분
+관리계열,세션정보값,T_SESSION_VALUE,,N,,세션 정보값
+관리계열,센터코드,T_CENTER_CODE,,N,,센터 코드
+관리계열,시군위치정보,T_SIGUN_LOCATION,,N,,시군 위치
+관리계열,시도위치정보,T_SIDO_LOCATION,,N,,시도 위치
+관리계열,시스템공통관리,T_SYSTEM_CONFIG,자동화기기_시스템공통관리,Y,,시스템 전역설정(#85 40+컬럼)
+관리계열,업로드LOG(기타),T_UPLOAD_LOG_ETC,,N,,업로드 로그
+관리계열,업로드사진(기타),T_UPLOAD_PHOTO_ETC,,N,,업로드 사진
+관리계열,업로드전자저널(기타),T_UPLOAD_EJOURNAL_ETC,,N,T_JNLIMAGE_HISTORY,업로드 전자저널
+관리계열,업체/기기/장애유형별월별가동율,T_OPRATE_VENDOR_MON,,N,,유형별 월별 가동율
+관리계열,업체/기기/장애유형별일별가동율,T_OPRATE_VENDOR_DAY,,N,,유형별 일별 가동율
+관리계열,업체_업체_관리,T_VENDOR,,N,T_VENDOR(가정),업체 관리
+관리계열,용역_직원_담당_코너,T_SVC_STAFF_CORNER,,N,,용역직원 담당코너
+관리계열,용역료_기준,T_SVCFEE_BASE,,N,,용역료 기준
+관리계열,용역마감업무및시재,T_SVC_CLOSE_CASH,,N,,용역마감 시재
+관리계열,용역사_PNI_접수,T_SVC_PNI_RECEIPT,,N,,용역사 PNI 접수
+관리계열,용역사_SLA_평가,T_SLAGRADE,,N,T_SLAGRADE(V1.3.0),용역사 SLA 평가
+관리계열,용역사_건수_평가,T_VENDOR_CNT_EVAL,,N,T_VENDORCSEVAL(V1.3.0),용역사 건수 평가
+관리계열,용역장애관리,T_SVC_FAULT_MNG,,N,,용역 장애
+관리계열,용역처리번호채번,T_SVC_PROC_SEQ,,N,,용역 처리번호
+관리계열,운영_자금_청구서_내역,T_OPER_FUND_BILL_DETAIL,,N,,자금 청구서 내역
+관리계열,운영자금청구서,T_OPER_FUND_BILL,,N,,자금 청구서
+관리계열,원격지시계획,T_REMOTE_CMD_PLAN,,N,,원격지시 계획
+관리계열,원격지시이력,T_REMOTE_CMD_HIST,,N,,원격지시 이력
+관리계열,원장정보,T_LEDGER_INFO,,N,,원장 정보
+관리계열,월가동율,T_OPRATE_MON,,N,,월 가동율
+관리계열,의뢰정보,T_REQUEST_INFO,,N,,의뢰 정보
+관리계열,인사정보,T_HR_INFO,자동화기기_인사정보,Y,,인사 마스터(#58)
+관리계열,일가동율,T_OPRATE_DAY,,N,T_OPERATIONRATEMANAGEMENT,일 가동율
+관리계열,일괄_용역_전문_채번,T_BATCH_SVC_MSG_SEQ,,N,,일괄용역 전문채번
+관리계열,일괄용역화면로그,T_BATCH_SVC_SCREEN_LOG,,N,,일괄용역 화면로그
+관리계열,일별자동화기기장애현황,T_DAILY_DEVICE_FAULT,,N,,일별 기기 장애현황
+관리계열,일자별용역대상여부기기정보,T_DAILY_SVC_TARGET_DEVICE,,N,,일자별 용역대상 기기
+관리계열,입출금_내역_통보,T_INOUT_NOTICE,,N,,입출금 내역통보
+관리계열,자금반환,T_FUNDRETURN,자동화기기_자금반환,Y,T_FUNDRETURN(V1.2.9),자금반환(#14)
+관리계열,자동기상태(GEN포함),T_DEVICE_STATUS_GEN,자동화기기_상태,Y,T_ATMSTATUS,기기상태(#35 70+컬럼)
+관리계열,자동기상태이력,T_DEVICE_STATUS_HIST,,N,T_ATMSTOPHISTORY,기기상태 이력
+관리계열,자동기지점별합계이력,T_DEVICE_BRANCH_TOTAL_HIST,,N,,지점별 합계이력
+관리계열,자동화기기위치변경요청이력,T_DEVICE_LOC_CHANGE_HIST,,N,,위치변경 요청이력
+관리계열,장애내역업로드,T_FAULT_UPLOAD,,N,,장애내역 업로드
+관리계열,장애출동관리,T_FAULT_DISPATCH_MNG,,N,T_FAULTMANAGEMENT,장애 출동
+관리계열,장애코드,T_FAULT_CODE,,N,,장애 코드
+관리계열,전문_송수신_이력,T_MSG_SENDRECV_HIST,자동화기기_채널수신전문,Y,T_NETSENDDATA,전문 송수신(#77)
+관리계열,전산기기자원정보INTERFACETABLE,T_IT_RESOURCE_IF,,N,T_GWINTERFACE,전산기기 자원정보 IF
+관리계열,정규현송계획서,T_REGULAR_SCRT_PLAN,,N,,정규 현송계획
+관리계열,조치_결과,T_ACTION_RESULT,,N,,조치 결과
+관리계열,추가_현송_보고서,T_ADD_SCRT_REPORT,,N,,추가 현송보고서
+관리계열,추가현송보고서(실시간),T_ADD_SCRT_REPORT_RT,,N,,추가 현송 실시간
+관리계열,추가현송보고서(집계),T_ADD_SCRT_REPORT_AGG,,N,,추가 현송 집계
+관리계열,코너_SLA_평가,T_CORNERSLA,,N,T_CORNERSLA(V1.3.0),코너 SLA 평가
+관리계열,코너별_용역료산정,T_CORNER_SVCFEE,,N,T_SERVICEFEECALC(V1.3.0),코너별 용역료
+관리계열,코너별월가동율,T_CORNER_OPRATE_MON,,N,,코너별 월가동율
+관리계열,코너별일가동율,T_CORNER_OPRATE_DAY,,N,,코너별 일가동율
+관리계열,코너평가,T_CORNER_EVAL,,N,,코너 평가
+관리계열,코드마스터,T_CODE_MASTER,자동화기기_코드마스터,Y,T_CODE,코드마스터(#48)
+관리계열,콘솔메시지,T_CONSOLE_MSG,,N,,콘솔 메시지
+관리계열,평가_구분,T_EVAL_TYPE,,N,,평가 구분
+관리계열,평가_기준_타입_1,T_EVAL_BASE_T1,,N,,평가기준 타입1
+관리계열,평가_기준_타입_2,T_EVAL_BASE_T2,,N,,평가기준 타입2
+관리계열,평가_기준_타입_3,T_EVAL_BASE_T3,,N,,평가기준 타입3
+관리계열,평가_기준_타입_4,T_EVAL_BASE_T4,,N,,평가기준 타입4
+관리계열,프로시져_로그,T_PROCEDURE_LOG,,N,,프로시저 로그
+관리계열,현송_계획_통계,T_SCRT_PLAN_STAT,,N,,현송 계획통계
+관리계열,현송_계획서_내역,T_SCRT_PLAN_DETAIL,,N,,현송 계획서 내역
+관리계열,회수_자금_결과_통보,T_RECOVER_FUND_RESULT,,N,,회수자금 결과통보
+관리계열,회수자금,T_RECOVER_FUND,,N,,회수 자금
+관리계열,휴일코드,T_HOLIDAY_CODE,자동화기기_휴일코드,Y,,휴일 마스터(#50)
+ILM계열,ILM_TB_ATM_STR,T_ILM_ATM_STR,,N,,ILM ATM 시재
+ILM계열,ILM_TB_ATM_STR_NEW,T_ILM_ATM_STR_NEW,,N,,ILM ATM 시재(신)
+ILM계열,ILM_TB_FUND_RETN_MEMO,T_ILM_FUND_RETN_MEMO,자동화기기_자금반환메모,Y,T_FUNDRETURNMEMO(V1.2.9),자금반환메모(#15)
+ILM계열,ILM_TB_STTC_DAY,T_ILM_STTC_DAY,자동화기기_일별거래통계,Y,T_TRANSACTIONDAILYTOTAL,일별 통계(#40)
+ILM계열,ILM_TB_STTC_MON,T_ILM_STTC_MON,자동화기기_월별거래통계,Y,,월별 통계(#42)
+ILM계열,ILM_거래상태 메세지,T_ILM_TRANS_STATUS_MSG,자동화기기_거래상태메세지,Y,T_TRANSTATUSMSG(V1.2.9),거래상태메시지(#36)
+ILM계열,ILM_공과금수납 거래 합계,T_ILM_UTILITY_TOTAL,자동화기기_공과금수납기거래합계,Y,,공과금 합계(#12)
+ILM계열,ILM_공과금수납 지로내역,T_ILM_UTILITY_GIRO,자동화기기_공과금수납기지로내역,Y,,공과금 지로(#11)
+ILM계열,ILM_금액별월거래통계,T_ILM_AMT_MON_STAT,,N,,금액별 월통계
+ILM계열,ILM_금액별일거래통계,T_ILM_AMT_DAY_STAT,,N,,금액별 일통계
+ILM계열,ILM_기종별월거래통계,T_ILM_MODEL_MON_STAT,,N,,기종별 월통계
+ILM계열,ILM_기종별일거래통계,T_ILM_MODEL_DAY_STAT,,N,,기종별 일통계
+ILM계열,ILM_방카슈랑스 상세내역,T_ILM_BANCA_DETAIL,자동화기기_방카슈랑스상세내역,Y,,방카슈랑스(#5)★사용자발견
+ILM계열,ILM_방카슈랑스 상세내역2차,T_ILM_BANCA_DETAIL2,자동화기기_방카슈랑스상세내역,Y,,방카슈랑스 2차(#5)
+ILM계열,ILM_사무소등록관리,T_ILM_BRANCH,자동화기기_사무소등록관리,Y,T_BRANCH,사무소(#25)
+ILM계열,ILM_상세코드,T_ILM_CODE_DETAIL,자동화기기_상세코드,Y,T_CODE,상세코드(#49)
+ILM계열,ILM_수수료면제사유별월거래통계,T_ILM_FEEFREE_MON_STAT,,N,,수수료면제 월통계
+ILM계열,ILM_수수료면제사유별일거래통계,T_ILM_FEEFREE_DAY_STAT,,N,,수수료면제 일통계
+ILM계열,ILM_수표체크 거래,T_ILM_CHECK_TRANS,자동화기기_수표크거래,Y,T_CHECKTRANSACTION,수표 거래(#4)
+ILM계열,ILM_수표체크 거래2차,T_ILM_CHECK_TRANS2,자동화기기_수표크거래,Y,,수표 거래 2차(#4)
+ILM계열,ILM_시간별월거래통계,T_ILM_HOUR_MON_STAT,자동화기기_시간별월거래통계,Y,,시간별 월통계(#43)
+ILM계열,ILM_시간별일거래통계,T_ILM_HOUR_DAY_STAT,자동화기기_시간별거래통계,Y,,시간별 통계(#41)
+ILM계열,ILM_시재부족관리거래,T_ILM_CASHSHORT_TRANS,자동화기기_시재부족관리거래,Y,,시재부족(#21)
+ILM계열,ILM_용역관리_기기정보,T_ILM_SVC_DEVICE,자동화기기_용역관리기기정보,Y,,용역기기(#31)
+ILM계열,ILM_월별거래통계,T_ILM_MON_STAT,자동화기기_월별거래통계,Y,,월별 통계(#42)
+ILM계열,ILM_인수도_DATA,T_ILM_HANDOVER_DATA,자동화기기_인수도DATA,Y,,인수도(#79)
+ILM계열,ILM_일별거래통계,T_ILM_DAY_STAT,자동화기기_일별거래통계,Y,T_TRANSACTIONDAILYTOTAL,일별 통계(#40)
+ILM계열,ILM_자금반환,T_ILM_FUNDRETURN,자동화기기_자금반환,Y,T_FUNDRETURN(V1.2.9),자금반환(#14)
+ILM계열,ILM_자동화기기 거래,T_ILM_TRANS,자동화기기_거래,Y,T_TRANSACTIONJOURNAL,메인거래(#1)
+ILM계열,ILM_자동화기기 거래2차,T_ILM_TRANS2,자동화기기_거래,Y,,메인거래 2차(#1)
+ILM계열,ILM_자동화기기 상태,T_ILM_DEVICE_STATUS,자동화기기_상태,Y,T_ATMSTATUS,기기상태(#35)
+ILM계열,ILM_자동화기기_환전거래,T_ILM_EXCHANGE,자동화기기_환전거래,Y,,환전(#7)
+ILM계열,ILM_자동화기기기타이체,T_ILM_ETC_TRANSFER,자동화기기_자동화기기타이,Y,,기타이체(#3)
+ILM계열,ILM_자동화기기기타이체2차,T_ILM_ETC_TRANSFER2,자동화기기_자동화기기타이,Y,,기타이체 2차(#3)
+ILM계열,ILM_자동화기기등록금,T_ILM_REGFUND,자동화기기_자동화기기등급금,Y,,등록금(#30)★사용자발견
+ILM계열,ILM_자동화기기재정지로납부,T_ILM_FISCAL_GIRO,자동화기기재정지로납부,Y,,재정지로(#19)
+ILM계열,ILM_자동화기기재정지로납부2차,T_ILM_FISCAL_GIRO2,자동화기기재정지로납부,Y,,재정지로 2차(#19)
+ILM계열,ILM_자동화기기전자화폐,T_ILM_ECASH,자동화기기_자동화기기전자화폐,Y,T_ECASHTRANSACTION(V1.2.9),전자화폐(#2)★사용자발견
+ILM계열,ILM_자동화기기전자화폐2차,T_ILM_ECASH2,자동화기기_자동화기기전자화폐,Y,,전자화폐 2차(#2)
+ILM계열,ILM_자동화기기지로,T_ILM_GIRO,자동화기기_자동화기기지로,Y,,지로(#9)
+ILM계열,ILM_자동화기기지로2차,T_ILM_GIRO2,자동화기기_자동화기기지로,Y,,지로 2차(#9)
+ILM계열,ILM_자동화기기지로납부,T_ILM_GIRO_PAY,자동화기기_자동화기기지로납부,Y,,지로납부(#10)
+ILM계열,ILM_자동화기기지로납부2차,T_ILM_GIRO_PAY2,자동화기기_자동화기기지로납부,Y,,지로납부 2차(#10)
+ILM계열,ILM_지로 월별 거래통계,T_ILM_GIRO_MON_STAT,자동화기기_지로월별거래통계,Y,,지로 월통계(#44)
+ILM계열,ILM_청사수수료입금대상내역,T_ILM_GOVFEE_DEPOSIT,자동화기기_청서수수료입금대상내역,Y,,청사수수료(#97)
+ILM계열,ILM_카드론 거래,T_ILM_CARDLOAN,자동화기기_카드론거래,Y,,카드론(#6)
+ILM계열,ILM_카드론 거래2차,T_ILM_CARDLOAN2,자동화기기_카드론거래,Y,,카드론 2차(#6)
+ILM계열,ILM_코드 마스터,T_ILM_CODE_MASTER,자동화기기_코드마스터,Y,T_CODE,코드마스터(#48)
+ILM계열,ILM_통합지로 상세내역,T_ILM_INTEG_GIRO,,N,,통합지로 상세
+ILM계열,ILM_통합지로 상세내역2차,T_ILM_INTEG_GIRO2,,N,,통합지로 2차
+ILM계열,ILM_해외송금관리,T_ILM_OVERSEAS_REMIT,자동화기기_해외송금관리,Y,,해외송금(#13)
+ILM계열,ILM_해외송금관리2차,T_ILM_OVERSEAS_REMIT2,자동화기기_해외송금관리,Y,,해외송금 2차(#13)
+ILM계열,ILM_휴일코드,T_ILM_HOLIDAY,자동화기기_휴일코드,Y,,휴일(#50)
+거래계열,1차파기거래조회기록,T_DESTROY_TRANS_LOG,자동화기기_1차파기거래조회기록,Y,,파기거래 조회(#22)
+거래계열,ATM에러메세지,T_ATM_ERR_MSG,자동화기기_ATM에러메세지,Y,,에러메시지(#52)
+거래계열,BP라우팅정보,T_BP_ROUTING,자동화기기_BP라우팅정보,Y,,BP 라우팅(#53)
+거래계열,CPC계좌관련테이블,T_CPC_ACCOUNT,자동화기기_CPC계좌관련테이블,Y,,CPC 계좌(#91)
+거래계열,CPC관련업무테이블,T_CPC_BIZ,자동화기기_CPC관련업테이블,Y,,CPC 업무(#90)
+거래계열,CPC대출실행관련테이블,T_CPC_LOAN,자동화기기_CPC대출실행관련테이블,Y,,CPC 대출(#92)
+거래계열,CPC자료집계,T_CPC_AGG,자동화기기_CPC자료집계,Y,,CPC 집계(#46)★사용자발견
+거래계열,SMS URL 홍보,T_SMS_URL_PROMO,자동화기기_SMS URL홍보,Y,,SMS 홍보(#72)
+거래계열,TB_APT_HISTORY,T_APT_HISTORY,자동화기기_TB_APT_HISTORY,Y,,APT 이력(#70)
+거래계열,TB_ATM_CRM,T_ATM_CRM,자동화기기_TB_ATM_CRM,Y,,ATM CRM(#71)
+거래계열,TB_BIZ_TALK,T_BIZ_TALK,자동화기기_TB_BIZ_TALK,Y,,비즈톡(#83)
+거래계열,TB_INSUR_GBN,T_INSUR_GBN,자동화기기_TB_INSUR_GBN,Y,,보험구분(#54)
+거래계열,TB_TONG_ATM_RESOURCE,T_TONG_ATM_RESOURCE,자동화기기_TB_TONG_ATM_RESOURCE,Y,,ATM 리소스(#89)★사용자발견
+거래계열,VM 한도 관리,T_VM_LIMIT,자동화기기_VM환전,Y,,VM 환전한도(#8)
+거래계열,개인정보출력이력,T_PRIVACY_OUTPUT_HIST,자동화기기_개인정보출력이력,Y,,개인정보출력 감사(#68)
+거래계열,거래내역열람이력,T_TRANS_VIEW_HIST,자동화기기_거래내역열람이력,Y,,거래내역열람 감사(#67)
+거래계열,거래상태 메세지,T_TRANS_STATUS_MSG,자동화기기_거래상태메세지,Y,T_TRANSTATUSMSG(V1.2.9),거래상태메시지(#36)
+거래계열,계좌별건수임시,T_ACCT_CNT_TMP,자동화기기_계좌별건수입시,Y,,계좌별 건수(#95)
+거래계열,계좌별생년월일,T_ACCT_BIRTH,자동화기기_계좌발생년월일,Y,,계좌 생년월일(#96)
+거래계열,고액권수표사용관리,T_HIGHCHECK_MNG,자동화기기_고액권수표사용관리,Y,,고액권수표(#23)
+거래계열,공과금수납 거래 합계,T_UTILITY_TRANS_TOTAL,자동화기기_공과금수납기거래합계,Y,,공과금 합계(#12)
+거래계열,공과금수납 밴드정보,T_UTILITY_BAND,자동화기기_공과금수납기밴드정보,Y,,OCR 밴드(#88)
+거래계열,공과금수납 지로내역,T_UTILITY_GIRO,자동화기기_공과금수납기지로내역,Y,,공과금 지로(#11)
+거래계열,공지사항,T_NOTICE,자동화기기_공지사항,Y,T_NOTICE,공지사항(#81)
+거래계열,기기HOSTIP정보,T_DEVICE_HOSTIP,자동화기기_기기HOSTIP정보,Y,,기기 네트워크(#28)
+거래계열,기기정보(ATM),T_ATM,자동화기기_기기정보(ATM),Y,T_ATM,기기 마스터(#27)
+거래계열,데몬 기동 정보,T_DAEMON_STATUS,자동화기기_데몬가동정보,Y,T_DAEMONSTATUS(V1.2.9),데몬 상태(#39)
+거래계열,데이터삭제이력,T_DATA_DELETE_HIST,자동화기기_데이터삭제이력,Y,,데이터삭제 이력(#69)
+거래계열,망상태상세,T_NETWORK_STATUS,자동화기기_망상태상세,Y,T_NETWORKSTATUS(V1.2.9),망상태(#37)
+거래계열,명세표편집,T_SLIP_EDIT,자동화기기_명세표편집,Y,,명세표 편집(#34)
+거래계열,무매체실명입금한도,T_NONMEDIA_LIMIT,자동화기기_무매실명입금현황,Y,T_NONBANKDEPOSIT(V1.2.9),무매체 입금(#80)
+거래계열,문자내용,T_SMS_CONTENT,자동화기기_문자내용,Y,T_SMSSENDDATA,문자내용(#65)
+거래계열,문자사용자,T_SMS_USER,자동화기기_문자사용자,Y,,문자 사용자(#64)
+거래계열,방카슈랑스 상세내역,T_BANCA_DETAIL,자동화기기_방카슈랑스상세내역,Y,,방카슈랑스(#5)
+거래계열,사고신고전문,T_ACCIDENT_MSG,자동화기기_사고신고전문,Y,,사고신고(#38)
+거래계열,사무소등록관리,T_BRANCH,자동화기기_사무소등록관리,Y,T_BRANCH,사무소(#25)
+거래계열,사무소정보(Raw Data),T_BRANCH_RAW,자동화기기_사무소경보(Raw Data),Y,,사무소 원본(#26)
+거래계열,상세코드,T_CODE_DETAIL,자동화기기_상세코드,Y,T_CODE,상세코드(#49)
+거래계열,수수료 계정처리 관리,T_FEE_ACCT_PROC,자동화기기_수수료제정처리관리,Y,,수수료 정산(#56)
+거래계열,수신공통 GRID 정보,T_RECV_GRID,자동화기기_수신공통GRID정보,Y,,GRID 패턴(#86)
+거래계열,수표체크 거래,T_CHECK_TRANS,자동화기기_수표크거래,Y,T_CHECKTRANSACTION,수표 거래(#4)
+거래계열,시간별 월거래통계,T_HOUR_MON_STAT,자동화기기_시간별월거래통계,Y,,시간별 월통계(#43)
+거래계열,시간별거래통계,T_HOUR_STAT,자동화기기_시간별거래통계,Y,,시간별 통계(#41)
+거래계열,시스템 공통관리,T_SYSTEM_CONFIG,자동화기기_시스템공통관리,Y,,시스템 설정(#85)
+거래계열,시재부족관리거래,T_CASHSHORT_TRANS,자동화기기_시재부족관리거래,Y,,시재부족(#21)
+거래계열,앱출금수수료,T_APP_WD_FEE,자동화기기_엡출금수수료,Y,,앱출금 수수료(#55)
+거래계열,업무계리로그기본,T_BIZLOG_BASE,자동화기기_업무제리로그기본,Y,,업무처리로그 메인(#73 60+컬럼)
+거래계열,업무계리로그상세,T_BIZLOG_DETAIL,자동화기기_업무제리로그상세,Y,,업무처리로그 상세(#74)
+거래계열,업무별_채번,T_BIZ_SEQ,,N,,업무별 채번
+거래계열,업무별미완료건수,T_BIZ_UNFIN_CNT,자동화기기_업무별미완료건수,Y,T_UNFINISHEDCOUNT(V1.2.9),미완료 건수(#75)
+거래계열,업무연락,T_BIZ_CONTACT,자동화기기_업무연락,Y,,업무연락(#82)
+거래계열,용역관리_기기정보,T_SVC_DEVICE,자동화기기_용역관리기기정보,Y,,용역기기(#31)
+거래계열,월별거래통계,T_MON_STAT,자동화기기_월별거래통계,Y,,월별 통계(#42)
+거래계열,이중처리 거래 체크,T_DUP_TRANS_CHECK,자동화기기_이중처리거래크,Y,,이중처리 방지(#16)
+거래계열,인사정보,T_HR_INFO,자동화기기_인사정보,Y,,인사 마스터(#58)
+거래계열,인사정보(Raw Data),T_HR_RAW,자동화기기_인사정보(Raw Data),Y,,인사 원본(#59)
+거래계열,인수도_DATA,T_HANDOVER_DATA,자동화기기_인수도DATA,Y,,인수도(#79)
+거래계열,일별거래통계,T_DAY_STAT,자동화기기_일별거래통계,Y,T_TRANSACTIONDAILYTOTAL,일별 통계(#40)
+거래계열,자금반환,T_FUNDRETURN,자동화기기_자금반환,Y,T_FUNDRETURN(V1.2.9),자금반환(#14)
+거래계열,자금반환메모,T_FUNDRETURN_MEMO,자동화기기_자금반환메모,Y,T_FUNDRETURNMEMO(V1.2.9),자금반환메모(#15)
+거래계열,자동화기기 거래,T_TRANSACTION,자동화기기_거래,Y,T_TRANSACTIONJOURNAL,메인거래(#1 60+컬럼)
+거래계열,자동화기기 상태,T_DEVICE_STATUS,자동화기기_상태,Y,T_ATMSTATUS,기기상태(#35 70+컬럼)
+거래계열,자동화기기 우수고객,T_VIP_CUSTOMER,자동화기기_우수고객,Y,,우수고객(#63)
+거래계열,자동화기기 이벤트,T_DEVICE_EVENT,자동화기기_자동화기기이벤트,Y,,기기 이벤트(#32)
+거래계열,자동화기기기타이체,T_ETC_TRANSFER,자동화기기_자동화기기타이,Y,,기타이체(#3)
+거래계열,자동화기기등록금,T_REGFUND,자동화기기_자동화기기등급금,Y,,등록금(#30)★사용자발견
+거래계열,자동화기기운영시간,T_DEVICE_OPER_TIME,자동화기기_자동화기기온열시간,Y,T_DEVICEHEATTIME(V1.2.9),운영/온열시간(#29)
+거래계열,자동화기기재정지로납부,T_FISCAL_GIRO,자동화기기재정지로납부,Y,,재정지로(#19)
+거래계열,자동화기기전자화폐,T_ECASH,자동화기기_자동화기기전자화폐,Y,T_ECASHTRANSACTION(V1.2.9),전자화폐(#2)★사용자발견
+거래계열,자동화기기지로,T_GIRO,자동화기기_자동화기기지로,Y,,지로(#9)
+거래계열,자동화기기지로납부,T_GIRO_PAY,자동화기기_자동화기기지로납부,Y,,지로납부(#10)
+거래계열,저널권한,T_JOURNAL_AUTH,자동화기기_저널권한,Y,,저널 권한(#61)
+거래계열,저널권한이력,T_JOURNAL_AUTH_HIST,자동화기기_저널권한이력,Y,,저널 권한이력(#62)
+거래계열,전자결재이력,T_EAPPROVAL_HIST,자동화기기_전자결재이력,Y,,전자결재(#66)
+거래계열,정합성처리 대상,T_CONSISTENCY_TARGET,자동화기기_검합성처리,Y,,정합성 처리(#24)
+거래계열,지로 월별 거래통계,T_GIRO_MON_STAT,자동화기기_지로월별거래통계,Y,,지로 월통계(#44)
+거래계열,집계,T_AGGREGATE,자동화기기_집계,Y,,거래 집계(#45)
+거래계열,채널수신전문,T_CHANNEL_RECV_MSG,자동화기기_채널수신전문,Y,T_NETRECVDATA,채널수신전문(#77)
+거래계열,첨부파일관리,T_ATTACH_FILE,자동화기기_첨부파일관리,Y,,첨부파일(#84)
+거래계열,청사수수료입금대상내역,T_GOVFEE_DEPOSIT,자동화기기_청서수수료입금대상내역,Y,,청사수수료(#97)
+거래계열,카드론 거래,T_CARDLOAN,자동화기기_카드론거래,Y,,카드론(#6)
+거래계열,카드빈,T_CARDBIN,자동화기기_카드빈,Y,T_CARDBIN(V1.2.9),카드BIN(#51)
+거래계열,코드 마스터,T_CODE_MASTER,자동화기기_코드마스터,Y,T_CODE,코드마스터(#48)
+거래계열,타사잔액,T_OTHER_BANK_BALANCE,자동화기기_타사잔액,Y,,타사 잔액(#93)
+거래계열,타사채널수신전문,T_OTHER_CHANNEL_RECV,자동화기기_타사채널수신전문,Y,,타사 채널전문(#78)
+거래계열,타사카드론한도,T_OTHER_CARDLOAN_LIMIT,자동화기기_타사카드론한도,Y,,타사 카드론(#94)
+거래계열,타사한도,T_OTHER_LIMIT,,N,,타사 한도
+거래계열,타행한도,T_OTHERBANK_LIMIT,자동화기기_타행도,Y,,타행 한도(#47)
+거래계열,통장기장,T_PASSBOOK,자동화기기_통장기장,Y,,통장기장(#17)
+거래계열,통장기장 정보,T_PASSBOOK_INFO,자동화기기_통장가입정보,Y,,통장가입(#18/#87)
+거래계열,통합업무시스템 권한,T_INTEG_SYS_AUTH,자동화기기_통합업무시스템권한,Y,,시스템 권한(#60)
+거래계열,통합지로 상세내역,T_INTEG_GIRO_DETAIL,,N,,통합지로 상세
+거래계열,프리폼명세표관리,T_FREEFORM_SLIP,자동화기기_프리폼명세표관리,Y,,명세표 설정(#33)
+거래계열,해외송금관리,T_OVERSEAS_REMIT,자동화기기_해외송금관리,Y,,해외송금(#13)
+거래계열,홍보문구관리,T_PROMO_TEXT,자동화기기_홍보문구관리,Y,,홍보문구(#57)
+거래계열,환전거래,T_EXCHANGE,자동화기기_환전거래,Y,,환전(#7)
+거래계열,휴일코드,T_HOLIDAY_CODE,자동화기기_휴일코드,Y,,휴일(#50)

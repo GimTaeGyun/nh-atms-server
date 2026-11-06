@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.nh.atms.journal.mapper.AtmUnitStatusWriteMapper">
+
+    <update id="upsert" parameterType="kr.co.nh.atms.journal.entity.AtmUnitStatus">
+        MERGE INTO T_ATM_UNIT_STATUS t
+        USING (
+            SELECT
+                #{termGroupId,jdbcType=CHAR}    AS TERM_GROUP_ID,
+                #{termId,jdbcType=VARCHAR}      AS TERM_ID,
+                #{deviceId,jdbcType=VARCHAR}    AS DEVICE_ID,
+                #{agentType,jdbcType=CHAR}      AS AGENT_TYPE
+            FROM DUAL
+        ) s
+        ON (    t.TERM_GROUP_ID = s.TERM_GROUP_ID
+            AND t.TERM_ID       = s.TERM_ID
+            AND t.DEVICE_ID     = s.DEVICE_ID
+            AND t.AGENT_TYPE    = s.AGENT_TYPE )
+        WHEN MATCHED THEN UPDATE SET
+            t.LOGICAL_SERVICE = #{logicalService,jdbcType=VARCHAR},
+            t.STATUS          = #{status,jdbcType=VARCHAR},
+            t.FAULT_FLAG      = #{faultFlag,jdbcType=CHAR},
+            t.JNL_DATE        = #{jnlDate,jdbcType=CHAR},
+            t.JNL_TIME        = #{jnlTime,jdbcType=CHAR},
+            t.SP_VERSION      = #{spVersion,jdbcType=VARCHAR},
+            t.EP_VERSION      = #{epVersion,jdbcType=VARCHAR},
+            t.UPD_DT          = CURRENT_TIMESTAMP
+        WHEN NOT MATCHED THEN INSERT (
+            TERM_GROUP_ID, TERM_ID, DEVICE_ID, AGENT_TYPE,
+            LOGICAL_SERVICE, STATUS, FAULT_FLAG, JNL_DATE, JNL_TIME,
+            SP_VERSION, EP_VERSION, UPD_DT
+        ) VALUES (
+            #{termGroupId,jdbcType=CHAR},   #{termId,jdbcType=VARCHAR},
+            #{deviceId,jdbcType=VARCHAR},   #{agentType,jdbcType=CHAR},
+            #{logicalService,jdbcType=VARCHAR}, #{status,jdbcType=VARCHAR},
+            #{faultFlag,jdbcType=CHAR},     #{jnlDate,jdbcType=CHAR},
+            #{jnlTime,jdbcType=CHAR},       #{spVersion,jdbcType=VARCHAR},
+            #{epVersion,jdbcType=VARCHAR},  CURRENT_TIMESTAMP
+        )
+    </update>
+
+</mapper>

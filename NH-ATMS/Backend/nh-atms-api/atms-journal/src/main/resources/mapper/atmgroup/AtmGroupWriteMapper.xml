@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.nh.atms.journal.mapper.AtmGroupWriteMapper">
+
+    <!-- 임시 기기그룹 등록 (atmr insert_ignore_T_ATMGROUP. PK(TERM_GROUP_ID) 중복 시 무시) -->
+    <insert id="insertIgnore">
+        MERGE INTO T_ATM_GROUP t
+        USING (SELECT #{termGroupId,jdbcType=CHAR} AS TERM_GROUP_ID FROM dual) s
+           ON (t.TERM_GROUP_ID = s.TERM_GROUP_ID)
+        WHEN NOT MATCHED THEN
+            INSERT (TERM_GROUP_ID, TERM_GROUP_NAME, GROUP_LEVEL, PARENT_ID, SUPER_ID)
+            VALUES (#{termGroupId,jdbcType=CHAR}, #{termGroupName,jdbcType=CHAR},
+                    #{groupLevel,jdbcType=NUMERIC}, #{parentId,jdbcType=CHAR},
+                    #{superId,jdbcType=CHAR})
+    </insert>
+
+</mapper>

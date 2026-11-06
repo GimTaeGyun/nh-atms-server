@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.nh.atms.batch.mapper.Batday09Mapper">
+
+    <!-- =================================================================
+         batday09 : 일별 자동화기기 이력정보 - AS-IS atmb sqlmap/batday09.xml 이식
+         TO-BE 스키마 대응:
+           t_atm/t_corner        → T_ATM/T_CORNER
+             (AS-IS 조인 a.branch_cd = b.corner_cd 는 MG 데이터 특성(지점코드=코너코드)
+              에 의존 → TO-BE 는 T_ATM.CORNER_CD = T_CORNER.CORNER_CD 로 대체)
+           t_atmdevicestatus     → T_ATM_DEVICE_STATUS
+           t_atmunitstatus       → T_ATM_UNIT_STATUS
+             (TO-BE 는 AGENT_TYPE 이 키에 포함 → 카메라(G) STATUS 는 MAX 로 단일화)
+           t_atmgroup            → T_ATM_GROUP
+             (AS-IS bank_cd = parent_id 는 NH 그룹체계와 달라 상수(bankCd) 사용,
+              parent_id is not null 필터 제외)
+         ================================================================= -->
+
+    <select id="countReport06Target" resultType="long">
+        SELECT COUNT(*)
+          FROM T_ATM a
+               INNER JOIN T_CORNER b
+                       ON a.TERM_GROUP_ID = b.TERM_GROUP_ID
+                      AND a.CORNER_CD     = b.CORNER_CD
+               INNER JOIN T_ATM_DEVICE_STATUS d
+                       ON a.TERM_GROUP_ID = d.TERM_GROUP_ID
+                      AND a.TERM_ID       = d.TERM_ID
+         WHERE a.PROTOCOL_TYPE = 'T'
+           AND a.ATM_STATUS IN ('1', '2', '4')
+    </select>
+
+    <delete id="deleteReport06">
+        DELETE FROM T_DAILY_REPORT06 WHERE TR_DATE = #{trDate}
+    </delete>
+
+    <insert id="insertReport06">
+        INSERT INTO T_DAILY_REPORT06 (
+            BANK_CD, TR_DATE, TERM_GROUP_ID, TERM_ID,
+            BOOTH_TYPE_CD, OUT_SRC_CO_CD, GUARD_CO_CD,
+            DES_APPLY, EMV_APPLY, IC_APPLY, IR_APPLY, RF_APPLY, FP_APPLY,
+            OMAN_APPLY, ENCODE_APPLY, FACE, HAND, PROTOCOL_TYPE,
+            CHK_STATUS, BARCODE_APPLY, PB_AUTO_TURN, HANDICAP_ATM
+        )
+        SELECT #{bankCd}                             AS BANK_CD
+             , #{trDate}                             AS TR_DATE
+             , t1.TERM_GROUP_ID                      AS TERM_GROUP_ID
+             , t1.TERM_ID                            AS TERM_ID
+             , t1.BOOTH_TYPE_CD                      AS BOOTH_TYPE_CD
+             , t1.OUTSRC_CO_CD                       AS OUT_SRC_CO_CD
+             , t1.GUARD_CO_CD                        AS GUARD_CO_CD
+             , t2.DES_APPLY                          AS DES_APPLY
+             , t2.EMV_APPLY                          AS EMV_APPLY
+             , t2.IC_APPLY                           AS IC_APPLY
+             , t2.IR_APPLY                           AS IR_APPLY
+             , t2.RF_APPLY                           AS RF_APPLY
+             , t2.FP_APPLY                           AS FP_APPLY
+             , t2.OMAN_APPLY                         AS OMAN_APPLY
+             , t2.ENCODE_APPLY                       AS ENCODE_APPLY
+             , NVL(SUBSTR(t3.STATUS, 3, 1), '0')     AS FACE
+             , NVL(SUBSTR(t3.STATUS, 4, 1), '0')     AS HAND
+             , t1.PROTOCOL_TYPE                      AS PROTOCOL_TYPE
+             , t2.CHK_STATUS                         AS CHK_STATUS
+             , t2.BARCODE_APPLY                      AS BARCODE_APPLY
+             , t2.PB_AUTO_TURN                       AS PB_AUTO_TURN
+             , t2.HANDICAP_ATM                       AS HANDICAP_ATM
+          FROM (
+                 SELECT a.TERM_GROUP_ID
+                      , a.TERM_ID
+                      , a.PROTOCOL_TYPE
+                      , b.BOOTH_TYPE_CD
+                      , b.OUTSRC_CO_CD
+                      , b.GUARD_CO_CD
+                   FROM T_ATM a
+                        INNER JOIN T_CORNER b
+                                ON a.TERM_GROUP_ID = b.TERM_GROUP_ID
+                               AND a.CORNER_CD     = b.CORNER_CD
+                  WHERE a.PROTOCOL_TYPE = 'T'
+                    AND a.ATM_STATUS IN ('1', '2', '4')   -- 1:운영중 2:임시철수 4:임시중단
+               ) t1
+               INNER JOIN T_ATM_DEVICE_STATUS t2
+                       ON t1.TERM_GROUP_ID = t2.TERM_GROUP_ID
+                      AND t1.TERM_ID       = t2.TERM_ID
+               LEFT OUTER JOIN (
+                 SELECT TERM_GROUP_ID, TERM_ID, MAX(STATUS) AS STATUS
+                   FROM T_ATM_UNIT_STATUS
+                  WHERE DEVICE_ID = 'G'
+                  GROUP BY TERM_GROUP_ID, TERM_ID
+               ) t3
+                       ON t1.TERM_GROUP_ID = t3.TERM_GROUP_ID
+                      AND t1.TERM_ID       = t3.TERM_ID
+               INNER JOIN T_ATM_GROUP t4
+                       ON t1.TERM_GROUP_ID = t4.TERM_GROUP_ID
+    </insert>
+
+</mapper>

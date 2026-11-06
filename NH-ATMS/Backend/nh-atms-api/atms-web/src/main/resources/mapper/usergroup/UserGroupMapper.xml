@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.nh.atms.web.usergroup.mapper.UserGroupMapper">
+
+    <resultMap id="rm" type="kr.co.nh.atms.web.usergroup.entity.UserGroup" autoMapping="true"/>
+
+    <sql id="cols">
+        USER_GROUP_NO, USER_GROUP_NAME, USER_TYPE_CD, DESCRIPTION, USE_YN, REG_DT, UPD_DT
+    </sql>
+
+    <sql id="where">
+        <where>
+            <if test="userGroupName != null and userGroupName != ''">
+                AND USER_GROUP_NAME LIKE '%' || #{userGroupName} || '%'
+            </if>
+            <if test="userTypeCd != null and userTypeCd != ''">AND USER_TYPE_CD = #{userTypeCd}</if>
+            <if test="useYn != null and useYn != ''">AND USE_YN = #{useYn}</if>
+        </where>
+    </sql>
+
+    <select id="selectList" resultMap="rm">
+        SELECT <include refid="cols"/> FROM T_USER_GROUP
+        <include refid="where"/>
+        ORDER BY USER_GROUP_NO
+        OFFSET #{offset} ROWS FETCH NEXT #{limit} ROWS ONLY
+    </select>
+
+    <select id="countList" resultType="long">
+        SELECT COUNT(*) FROM T_USER_GROUP <include refid="where"/>
+    </select>
+
+    <select id="selectAll" resultMap="rm">
+        SELECT <include refid="cols"/> FROM T_USER_GROUP WHERE USE_YN = 'Y' ORDER BY USER_GROUP_NO
+    </select>
+
+    <select id="selectOne" resultMap="rm">
+        SELECT <include refid="cols"/> FROM T_USER_GROUP WHERE USER_GROUP_NO = #{userGroupNo}
+    </select>
+
+    <insert id="insert" parameterType="kr.co.nh.atms.web.usergroup.entity.UserGroup">
+        INSERT INTO T_USER_GROUP (
+            USER_GROUP_NO, USER_GROUP_NAME, USER_TYPE_CD, DESCRIPTION, USE_YN, REG_DT
+        ) VALUES (
+            SEQ_T_USER_GROUP.NEXTVAL,
+            #{userGroupName},
+            #{userTypeCd,jdbcType=CHAR},
+            #{description,jdbcType=VARCHAR},
+            NVL(#{useYn},'Y'),
+            SYSTIMESTAMP
+        )
+    </insert>
+
+    <update id="update" parameterType="kr.co.nh.atms.web.usergroup.entity.UserGroup">
+        UPDATE T_USER_GROUP
+        <set>
+            <if test="userGroupName != null">USER_GROUP_NAME = #{userGroupName},</if>
+            <if test="userTypeCd != null">USER_TYPE_CD = #{userTypeCd},</if>
+            <if test="description != null">DESCRIPTION = #{description},</if>
+            <if test="useYn != null">USE_YN = #{useYn},</if>
+            UPD_DT = SYSTIMESTAMP
+        </set>
+        WHERE USER_GROUP_NO = #{userGroupNo}
+    </update>
+
+    <delete id="delete">DELETE FROM T_USER_GROUP WHERE USER_GROUP_NO = #{userGroupNo}</delete>
+
+    <!-- ============================================================
+         T_USER_GROUP_AUTH : 그룹-권한 매핑
+         ============================================================ -->
+    <select id="selectAuthCodes" resultType="string">
+        SELECT AUTH_CODE FROM T_USER_GROUP_AUTH
+         WHERE USER_GROUP_NO = #{userGroupNo}
+         ORDER BY AUTH_CODE
+    </select>
+
+    <delete id="deleteAuthCodes">
+        DELETE FROM T_USER_GROUP_AUTH WHERE USER_GROUP_NO = #{userGroupNo}
+    </delete>
+
+    <insert id="insertAuthCode">
+        INSERT INTO T_USER_GROUP_AUTH (USER_GROUP_NO, AUTH_CODE, REG_DT)
+        VALUES (#{userGroupNo}, #{authCode}, SYSTIMESTAMP)
+    </insert>
+
+</mapper>

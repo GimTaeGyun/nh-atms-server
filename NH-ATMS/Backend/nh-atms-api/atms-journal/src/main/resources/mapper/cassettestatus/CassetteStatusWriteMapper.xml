@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.nh.atms.journal.mapper.CassetteStatusWriteMapper">
+
+    <!-- 카세트 잔여매수/상태 upsert. 기존 row 없으면 신규 생성. -->
+    <update id="upsert">
+        MERGE INTO T_CASSETTE_STATUS t
+        USING (SELECT #{termGroupId,jdbcType=CHAR}   AS TG,
+                      #{termId,jdbcType=VARCHAR}      AS TI,
+                      #{cassetteType,jdbcType=CHAR}   AS CT,
+                      <!-- CASSETTE_NO 는 CHAR(5) 컬럼 — VARCHAR 바인드 그대로 비교하면 blank-pad
+                           불일치로 항상 NOT MATCHED → 중복 INSERT(ORA-00001). CHAR 캐스팅으로 방어 -->
+                      CAST(#{cassetteNo,jdbcType=CHAR} AS CHAR(5)) AS CN FROM dual) s
+        ON (t.TERM_GROUP_ID = s.TG AND t.TERM_ID = s.TI
+            AND t.CASSETTE_TYPE = s.CT AND t.CASSETTE_NO = s.CN)
+        WHEN MATCHED THEN UPDATE SET
+            t.DENOM_CD     = #{denomCd,jdbcType=VARCHAR},
+            t.CURRENCY_CD  = #{currencyCd,jdbcType=CHAR},
+            t.REMAIN_COUNT = #{remainCount,jdbcType=NUMERIC},
+            t.STATUS       = #{status,jdbcType=CHAR},
+            t.CHECK_NO     = #{checkNo,jdbcType=VARCHAR}
+        WHEN NOT MATCHED THEN INSERT (
+            TERM_GROUP_ID, TERM_ID, CASSETTE_TYPE, CASSETTE_NO,
+            DENOM_CD, CURRENCY_CD, REMAIN_COUNT, STATUS, CHECK_NO
+        ) VALUES (
+            #{termGroupId,jdbcType=CHAR}, #{termId,jdbcType=VARCHAR},
+            #{cassetteType,jdbcType=CHAR}, #{cassetteNo,jdbcType=CHAR},
+            #{denomCd,jdbcType=VARCHAR}, #{currencyCd,jdbcType=CHAR},
+            #{remainCount,jdbcType=NUMERIC}, #{status,jdbcType=CHAR},
+            #{checkNo,jdbcType=VARCHAR}
+        )
+    </update>
+
+    <!-- 21/22 상태저널 → 단말 카세트 현황 전건 삭제(재생성 직전). atmr delete_T_CASSETTESTATUS -->
+    <delete id="deleteByTerm">
+        DELETE FROM T_CASSETTE_STATUS
+         WHERE TERM_GROUP_ID = #{termGroupId,jdbcType=CHAR}
+           AND TERM_ID       = #{termId,jdbcType=VARCHAR}
+    </delete>
+
+</mapper>

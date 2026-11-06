@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.nh.atms.journal.mapper.AtmHistoryWriteMapper">
+
+    <!-- 기기 설치/변경 이력 1건 적재 (PK 중복 시 무시) -->
+    <insert id="insert">
+        INSERT /*+ IGNORE_ROW_ON_DUPKEY_INDEX(T_ATM_HISTORY, PK_T_ATM_HISTORY) */
+          INTO T_ATM_HISTORY (
+            MACHINE_SNO, UPDATE_DATE, UPDATE_TIME,
+            TERM_GROUP_ID, TERM_ID, ATM_CO_CD, MODEL_CD,
+            UPDATE_CD, UPDATE_DESC
+        ) VALUES (
+            #{machineSno,jdbcType=VARCHAR}, #{updateDate,jdbcType=CHAR}, #{updateTime,jdbcType=CHAR},
+            #{termGroupId,jdbcType=CHAR}, #{termId,jdbcType=VARCHAR},
+            #{atmCoCd,jdbcType=CHAR}, #{modelCd,jdbcType=CHAR},
+            #{updateCd,jdbcType=CHAR}, #{updateDesc,jdbcType=VARCHAR}
+        )
+    </insert>
+
+</mapper>

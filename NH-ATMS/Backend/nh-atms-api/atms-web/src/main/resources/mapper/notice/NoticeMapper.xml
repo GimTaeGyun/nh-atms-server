@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.nh.atms.web.notice.mapper.NoticeMapper">
+
+    <resultMap id="rm" type="kr.co.nh.atms.web.notice.entity.Notice" autoMapping="true"/>
+
+    <sql id="cols">
+        TRIM(CAT_CD) AS CAT_CD, SEQ_NO, TRIM(SUBJECT) AS SUBJECT, CONTENT, HIT, STEP, DEPTH,
+        TRIM(ENTER_DATE) AS ENTER_DATE,
+        TRIM(ENTER_USER_ID) AS ENTER_USER_ID,
+        TRIM(ENTER_USER_NAME) AS ENTER_USER_NAME,
+        TRIM(ENTER_TERM_GROUP_ID) AS ENTER_TERM_GROUP_ID,
+        TRIM(ATTACHED_FILE_FLAG) AS ATTACHED_FILE_FLAG,
+        PARENT_SEQ_NO,
+        TRIM(BANK_CD) AS BANK_CD,
+        TRIM(TARGET_USER) AS TARGET_USER,
+        TRIM(USE_YN) AS USE_YN,
+        TRIM(START_DATE) AS START_DATE,
+        TRIM(END_DATE) AS END_DATE
+    </sql>
+
+    <sql id="where">
+        <where>
+            <if test="catCd != null and catCd != ''">AND TRIM(CAT_CD) = TRIM(#{catCd})</if>
+            <if test="subject != null and subject != ''">AND SUBJECT LIKE '%' || TRIM(#{subject}) || '%'</if>
+            <if test="enterUserId != null and enterUserId != ''">AND TRIM(ENTER_USER_ID) = TRIM(#{enterUserId})</if>
+            <if test="bankCd != null and bankCd != ''">AND TRIM(BANK_CD) = TRIM(#{bankCd})</if>
+            <if test="useYn != null and useYn != ''">AND TRIM(USE_YN) = TRIM(#{useYn})</if>
+            <if test="startDate != null and startDate != ''">AND TRIM(ENTER_DATE) &gt;= TRIM(#{startDate})</if>
+            <if test="endDate != null and endDate != ''">AND TRIM(ENTER_DATE) &lt;= TRIM(#{endDate})</if>
+        </where>
+    </sql>
+
+    <select id="selectList" resultMap="rm">
+        SELECT <include refid="cols"/> FROM T_NOTICE
+        <include refid="where"/>
+        ORDER BY SEQ_NO DESC
+        OFFSET #{offset} ROWS FETCH NEXT #{limit} ROWS ONLY
+    </select>
+
+    <select id="countList" resultType="long">
+        SELECT COUNT(*) FROM T_NOTICE
+        <include refid="where"/>
+    </select>
+
+    <select id="selectOne" resultMap="rm">
+        SELECT <include refid="cols"/> FROM T_NOTICE
+        WHERE TRIM(CAT_CD) = TRIM(#{catCd}) AND SEQ_NO = #{seqNo}
+    </select>
+
+    <select id="nextSeqNo" resultType="long">
+        SELECT NVL(MAX(SEQ_NO), 0) + 1 FROM T_NOTICE WHERE TRIM(CAT_CD) = TRIM(#{catCd})
+    </select>
+
+    <insert id="insert" parameterType="kr.co.nh.atms.web.notice.entity.Notice">
+        INSERT INTO T_NOTICE (
+            CAT_CD, SEQ_NO, SUBJECT, CONTENT, HIT, STEP, DEPTH,
+            ENTER_DATE, ENTER_USER_ID, ENTER_USER_NAME, ENTER_TERM_GROUP_ID,
+            ATTACHED_FILE_FLAG, PARENT_SEQ_NO, BANK_CD, TARGET_USER,
+            USE_YN, START_DATE, END_DATE
+        ) VALUES (
+            TRIM(#{catCd}), #{seqNo}, TRIM(#{subject}), #{content}, 0,
+            NVL(#{step,jdbcType=INTEGER}, 1), NVL(#{depth,jdbcType=INTEGER}, 0),
+            TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'),
+            TRIM(#{enterUserId}),
+            TRIM(#{enterUserName,jdbcType=VARCHAR}),
+            TRIM(#{enterTermGroupId,jdbcType=VARCHAR}),
+            TRIM(#{attachedFileFlag}),
+            #{parentSeqNo,jdbcType=BIGINT},
+            TRIM(#{bankCd,jdbcType=VARCHAR}),
+            TRIM(#{targetUser,jdbcType=VARCHAR}),
+            TRIM(#{useYn,jdbcType=VARCHAR}),
+            TRIM(#{startDate,jdbcType=VARCHAR}),
+            TRIM(#{endDate,jdbcType=VARCHAR})
+        )
+    </insert>
+
+    <update id="update" parameterType="kr.co.nh.atms.web.notice.entity.Notice">
+        UPDATE T_NOTICE
+        <set>
+            <if test="subject != null">SUBJECT = TRIM(#{subject}),</if>
+            <if test="content != null">CONTENT = #{content},</if>
+            <if test="attachedFileFlag != null">ATTACHED_FILE_FLAG = TRIM(#{attachedFileFlag}),</if>
+            <if test="targetUser != null">TARGET_USER = TRIM(#{targetUser}),</if>
+            <if test="useYn != null">USE_YN = TRIM(#{useYn}),</if>
+            <if test="startDate != null">START_DATE = TRIM(#{startDate}),</if>
+            <if test="endDate != null">END_DATE = TRIM(#{endDate}),</if>
+        </set>
+        WHERE TRIM(CAT_CD) = TRIM(#{catCd}) AND SEQ_NO = #{seqNo}
+    </update>
+
+    <delete id="delete">
+        DELETE FROM T_NOTICE
+        WHERE TRIM(CAT_CD) = TRIM(#{catCd}) AND SEQ_NO = #{seqNo}
+    </delete>
+
+    <update id="increaseHit">
+        UPDATE T_NOTICE SET HIT = NVL(HIT, 0) + 1
+        WHERE TRIM(CAT_CD) = TRIM(#{catCd}) AND SEQ_NO = #{seqNo}
+    </update>
+
+</mapper>

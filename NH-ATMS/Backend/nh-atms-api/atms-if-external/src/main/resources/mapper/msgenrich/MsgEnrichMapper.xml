@@ -1,0 +1,222 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.nh.atms.ifex.mapper.MsgEnrichMapper">
+
+    <!-- 출동요청(EM_01001120)/취소(1160)/변경(1170) 전문 조립 (레거시 selectFaultManagement 계열).
+         레거시 복합키(금고/단말/장애일시/분류/차수) 대신 신규 FAULT_SEQ 단일키 조회.
+         레거시 컬럼 대응: REQUEST_DATE/TIME→CALL_DATE/TIME, REQUEST_SEQNO→JNL_TIME,
+                          ERR_CD2→ERR_CD, PROVIDER_CD→VENDOR_CD, REQUEST_COMMENT→FAULT_DESC -->
+    <select id="selectServiceCallInfo" resultType="map">
+        SELECT F.FAULT_SEQ                          AS "faultSeq"
+             , F.GLOBAL_ID                          AS "globalId"
+             , F.CALL_DATE                          AS "requestDate"
+             , F.CALL_TIME                          AS "requestTime"
+             , F.JNL_DATE                           AS "jnlDate"
+             , F.JNL_TIME                           AS "jnlTime"
+             , LPAD(TO_CHAR(NVL(F.MANAGE_NO, 1)), 2, '0') AS "manageNo"
+             , CASE WHEN F.PROVIDER_TYPE_CD IN ('1', '4') THEN '2' ELSE '1' END AS "dispatchOrderType"
+             , F.TERM_GROUP_ID                      AS "termGroupId"
+             , B.TERM_GROUP_NAME                    AS "termGroupName"
+             , A.CORNER_CD                          AS "cornerCd"
+             , SUBSTR(C.CORNER_NAME, 1, 40)         AS "cornerName"
+             , F.TERM_ID                            AS "termId"
+             , A.ATM_CO_CD                          AS "atmCoCd"
+             , A.MODEL_CD                           AS "modelCd"
+             , F.REQUEST_TYPE_CD                    AS "requestTypeCd"
+             , F.REQUEST_REASON_CD                  AS "requestReasonCd"
+             , TRIM(F.SERVICE_PERSON)               AS "servicePerson"
+             , TRIM(F.SERVICE_PHONE_NO)             AS "servicePhoneNo"
+             , F.ERR_GROUP_CD                       AS "errGroupCd"
+             , F.ERR_CD                             AS "errCd"
+             , F.FAULT_CLASS_CD                     AS "faultClassCd"
+             , TRIM(F.FAULT_DESC)                   AS "requestComment"
+             , F.CUSTOMER_WAIT_FLAG                 AS "customerWaitFlag"
+             , F.PROVIDER_TYPE_CD                   AS "providerTypeCd"
+             , F.VENDOR_CD                          AS "providerCd"
+          FROM T_FAULT_MANAGEMENT F
+          LEFT JOIN T_ATM A
+                 ON A.TERM_GROUP_ID = F.TERM_GROUP_ID
+                AND A.TERM_ID       = F.TERM_ID
+          LEFT JOIN T_ATM_GROUP B
+                 ON A.TERM_GROUP_ID = B.TERM_GROUP_ID
+          LEFT JOIN T_CORNER C
+                 ON A.CORNER_CD     = C.CORNER_CD
+                AND A.TERM_GROUP_ID = C.TERM_GROUP_ID
+         WHERE F.FAULT_SEQ = #{faultSeq}
+    </select>
+
+    <!-- 코너변경(SM_02001160) 조립 (레거시 selectCorner — T_BRANCH 대신 T_ATM_GROUP 금고명) -->
+    <select id="selectCorner" parameterType="map" resultType="map">
+        SELECT C.TERM_GROUP_ID                  AS "termGroupId"
+             , SUBSTR(B.TERM_GROUP_NAME, 1, 40) AS "termGroupName"
+             , C.CORNER_CD                      AS "cornerCd"
+             , SUBSTR(C.CORNER_NAME, 1, 40)     AS "cornerName"
+             , C.CORNER_TYPE_CD                 AS "cornerTypeCd"
+             , C.OPERATION_TYPE_CD              AS "operationTypeCd"
+             , C.OUTSRC_CO_CD                   AS "outsrcCoCd"
+             , SUBSTR(C.ADDRESS, 1, 40)         AS "address"
+             , C.BRANCH_CD                      AS "branchCd"
+          FROM T_CORNER C
+          LEFT JOIN T_ATM_GROUP B
+                 ON B.TERM_GROUP_ID = C.TERM_GROUP_ID
+         WHERE C.TERM_GROUP_ID = #{termGroupId}
+           AND C.CORNER_CD     = #{cornerCd}
+    </select>
+
+    <!-- 기기정보통보(IQ_04001140) 조립 (레거시 selectAtmDeviceStatusAndServiceProvider) -->
+    <select id="selectMachineInfo" parameterType="map" resultType="map">
+        SELECT D.ADD_INFO      AS "addInfo"
+             , S.PROVIDER_NAME AS "providerName"
+             , A.ATM_CO_CD     AS "atmCoCd"
+          FROM T_SERVICE_PROVIDER S
+          LEFT JOIN T_CORNER C
+                 ON S.PROVIDER_CD   = C.PARTNER_CD
+          LEFT JOIN T_ATM A
+                 ON C.TERM_GROUP_ID = A.TERM_GROUP_ID
+                AND C.CORNER_CD     = A.CORNER_CD
+          LEFT JOIN T_ATM_DEVICE_STATUS D
+                 ON A.TERM_GROUP_ID = D.TERM_GROUP_ID
+                AND A.TERM_ID       = D.TERM_ID
+         WHERE A.TERM_GROUP_ID = #{termGroupId}
+           AND A.TERM_ID       = #{termId}
+         FETCH FIRST 1 ROWS ONLY
+    </select>
+
+    <!-- 동시다발장애(EM_01001180) 대표 단말 정보 (T_REPEATEDLYFAULTATM 폐지 → 기기/코너 마스터 직접 조회) -->
+    <select id="selectManyFailureAtmInfo" parameterType="map" resultType="map">
+        SELECT A.CORNER_CD                      AS "cornerCd"
+             , SUBSTR(C.CORNER_NAME, 1, 40)     AS "cornerName"
+             , A.MODEL_CD                       AS "modelCd"
+             , A.ATM_CO_CD                      AS "atmCoCd"
+             , C.BRANCH_CD                      AS "branchCd"
+          FROM T_ATM A
+          LEFT JOIN T_CORNER C
+                 ON A.CORNER_CD     = C.CORNER_CD
+                AND A.TERM_GROUP_ID = C.TERM_GROUP_ID
+         WHERE A.TERM_GROUP_ID = #{termGroupId}
+           AND A.TERM_ID       = #{termId}
+    </select>
+
+    <!-- 기기상태이력 생성 (레거시 insertAtmMonitor — 전문처리 AGENT_TYPE '9') -->
+    <insert id="insertAtmMonitor" parameterType="map">
+        INSERT INTO T_ATM_MONITOR (
+              TERM_GROUP_ID
+            , TERM_ID
+            , JNL_DATE
+            , JNL_TIME
+            , AGENT_TYPE
+            , ATM_STATUS
+            , SEND_FLAG
+            , RECV_DATE
+            , RECV_TIME
+        ) VALUES (
+              #{termGroupId}
+            , #{termId}
+            , TO_CHAR(SYSDATE, 'YYYYMMDD')
+            , SUBSTR(TO_CHAR(SYSTIMESTAMP, 'HH24MISSFF6'), 1, 10)
+            , '9'
+            , #{atmStatus}
+            , '0'
+            , TO_CHAR(SYSDATE, 'YYYYMMDD')
+            , SUBSTR(TO_CHAR(SYSTIMESTAMP, 'HH24MISSFF6'), 1, 10)
+        )
+    </insert>
+
+    <!-- 자동화기기 최종 출동정보 클리어 (레거시 updateAtmStatus_clear) -->
+    <update id="updateAtmStatusClear" parameterType="map">
+        UPDATE T_ATM_STATUS
+        <set>
+            <choose>
+                <when test='vendorType == "1"'>    <!-- 기기업체 -->
+                      LAST_ATM_CALL_DATE      = NULL
+                    , LAST_ATM_CALL_TIME      = NULL
+                    , LAST_ATM_SNO            = NULL
+                    , LAST_ATM_FAULT_CLASS_CD = NULL
+                </when>
+                <when test='vendorType == "3"'>    <!-- 용역업체 -->
+                      LAST_OUT_CALL_DATE      = NULL
+                    , LAST_OUT_CALL_TIME      = NULL
+                    , LAST_OUT_SNO            = NULL
+                    , FAULT_CLASS_CD          = NULL
+                </when>
+                <otherwise>
+                    <choose>
+                        <when test='faultClassCd == "50"'>    <!-- 경비업체 Key지원 -->
+                              LAST_KEY_CALL_DATE      = NULL
+                            , LAST_KEY_CALL_TIME      = NULL
+                            , LAST_KEY_SNO            = NULL
+                            , LAST_KEY_FAULT_CLASS_CD = NULL
+                        </when>
+                        <otherwise>
+                              LAST_OUT_CALL_DATE      = NULL
+                            , LAST_OUT_CALL_TIME      = NULL
+                            , LAST_OUT_SNO            = NULL
+                            , FAULT_CLASS_CD          = NULL
+                        </otherwise>
+                    </choose>
+                </otherwise>
+            </choose>
+        </set>
+        WHERE TERM_GROUP_ID = #{termGroupId}
+          AND TERM_ID       = #{termId}
+    </update>
+
+    <!-- 코너입퇴실시간정보 생성 (IQ_04001130 — 레거시 insertCornerTimeInfo) -->
+    <insert id="insertCornerTimeInfo" parameterType="map">
+        INSERT INTO T_CORNER_TIME_INFO (
+              PROVIDER_CD
+            , INOUT_DAY
+            , INOUT_TIME
+            , INOUT_LOT
+            , TERM_GROUP_ID
+            , TERM_ID
+            , BUSINESS_LOT
+            , CARD_NUM
+            , ATMS_RECEIVE_DATE
+            , ATMS_RECEIVE_TIME
+        ) VALUES (
+              #{providerCd}
+            , #{inoutDate}
+            , #{inoutTime}
+            , #{inoutType}
+            , #{termGroupId}
+            , #{termId}
+            , #{workType}
+            , #{cardNo}
+            , TO_CHAR(SYSDATE, 'YYYYMMDD')
+            , TO_CHAR(SYSDATE, 'HH24MISS')
+        )
+    </insert>
+
+    <!-- 코너 경비상태 갱신 (IQ_04001130 — 레거시 updateCorner) -->
+    <update id="updateCornerGuardStatus" parameterType="map">
+        UPDATE T_CORNER
+           SET GUARD_STATUS = #{inoutType}
+         WHERE TERM_GROUP_ID = #{termGroupId}
+           AND CORNER_CD     = (SELECT CORNER_CD
+                                  FROM T_ATM
+                                 WHERE TERM_GROUP_ID = #{termGroupId}
+                                   AND TERM_ID       = #{termId})
+    </update>
+
+    <!-- 장애관리 경비해제일시 갱신 (레거시 updateFaultManagement_at_04001130 단순화:
+         T_ATMSTATUS LAST_OUT_* 매칭 대신, 동일 위치구분 단말의 진행중(O/P)·미도착·미해제 건 갱신) -->
+    <update id="updateFaultSecurityOff" parameterType="map">
+        UPDATE T_FAULT_MANAGEMENT
+           SET SECURITY_OFF_DATE = #{inoutDate}
+             , SECURITY_OFF_TIME = #{inoutTime}
+             , UPD_DT            = CURRENT_TIMESTAMP
+         WHERE TERM_GROUP_ID = #{termGroupId}
+           AND TERM_ID IN (SELECT B.TERM_ID
+                             FROM T_ATM A, T_ATM B
+                            WHERE A.TERM_GROUP_ID    = #{termGroupId}
+                              AND A.TERM_ID          = #{termId}
+                              AND B.TERM_GROUP_ID    = A.TERM_GROUP_ID
+                              AND B.LOCATION_TYPE_CD = A.LOCATION_TYPE_CD)
+           AND FAULT_STATUS IN ('O', 'P')
+           AND ARRIVAL_DATE IS NULL
+           AND SECURITY_OFF_DATE IS NULL
+    </update>
+
+</mapper>

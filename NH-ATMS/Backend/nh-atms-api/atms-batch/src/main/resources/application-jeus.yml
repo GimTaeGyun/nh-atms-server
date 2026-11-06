@@ -1,0 +1,11 @@
+# =====================================================================
+# atms-batch — JEUS 배포 (서버 abat01 :8082, 컨텍스트 '/')
+# WebtoB 가 /api/batch/ 를 이 서버로 직접 보낸다. DB 가 없으면 기동 실패 (Spring Batch 메타 테이블)
+# =====================================================================
+spring:
+  config:
+    import: classpath:jeus-common.yml
+
+logging:
+  file:
+    name: ${jeus.log-dir}/atms-batch.log

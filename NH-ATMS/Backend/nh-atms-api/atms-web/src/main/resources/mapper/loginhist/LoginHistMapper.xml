@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.nh.atms.web.loginhist.mapper.LoginHistQueryMapper">
+
+    <resultMap id="rm" type="kr.co.nh.atms.web.loginhist.entity.LoginHist" autoMapping="true"/>
+
+    <sql id="cols">
+        LOGIN_SEQ, USER_ID, LOGIN_DT, LOGOUT_DT, LOGIN_IP, LOGIN_RESULT, FAIL_REASON, USER_AGENT
+    </sql>
+
+    <sql id="where">
+        <where>
+            <if test="userId != null and userId != ''">
+                AND USER_ID LIKE '%' || #{userId} || '%'
+            </if>
+            <if test="loginResult != null and loginResult != ''">
+                AND LOGIN_RESULT = #{loginResult}
+            </if>
+            <if test="fromDt != null and fromDt != ''">
+                AND LOGIN_DT &gt;= TO_DATE(#{fromDt}, 'YYYY-MM-DD')
+            </if>
+            <if test="toDt != null and toDt != ''">
+                AND LOGIN_DT &lt; TO_DATE(#{toDt}, 'YYYY-MM-DD') + 1
+            </if>
+        </where>
+    </sql>
+
+    <select id="selectList" resultMap="rm">
+        SELECT <include refid="cols"/>
+          FROM T_LOGIN_HIST
+        <include refid="where"/>
+         ORDER BY LOGIN_DT DESC, LOGIN_SEQ DESC
+        OFFSET #{offset} ROWS FETCH NEXT #{limit} ROWS ONLY
+    </select>
+
+    <select id="countList" resultType="long">
+        SELECT COUNT(*) FROM T_LOGIN_HIST
+        <include refid="where"/>
+    </select>
+
+</mapper>

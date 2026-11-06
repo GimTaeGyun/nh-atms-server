@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.nh.atms.ifex.mapper.SequenceNoMapper">
+
+    <!-- 현재 일련번호 조회 + 행 잠금 (구 SP_GET_SEQNO 의 SELECT ... FOR UPDATE) -->
+    <select id="selectBaseNoForUpdate" resultType="java.lang.Long">
+        SELECT BASE_NO
+          FROM T_SEQ_NO_MASTER
+         WHERE BASE_CD_TYPE  = #{type}
+           AND BASE_CONTENT1 = #{c1}
+           AND BASE_CONTENT2 = #{c2}
+           FOR UPDATE
+    </select>
+
+    <!-- 현재 일련번호 단순 조회 (잠금 없음 — 결번요청 최종일련번호 응답) -->
+    <select id="selectBaseNo" resultType="java.lang.Long">
+        SELECT BASE_NO
+          FROM T_SEQ_NO_MASTER
+         WHERE BASE_CD_TYPE  = #{type}
+           AND BASE_CONTENT1 = #{c1}
+           AND BASE_CONTENT2 = #{c2}
+    </select>
+
+    <!-- 신규 채번 행 삽입 -->
+    <insert id="insert">
+        INSERT INTO T_SEQ_NO_MASTER (
+            BASE_CD_TYPE, BASE_CONTENT1, BASE_CONTENT2,
+            BASE_CONTENT3, BASE_CONTENT4, BASE_CONTENT5, BASE_NO
+        ) VALUES (
+            #{type}, #{c1}, #{c2},
+            '0', '0', '0', #{baseNo}
+        )
+    </insert>
+
+    <!-- 기존 채번 행 갱신 -->
+    <update id="updateBaseNo">
+        UPDATE T_SEQ_NO_MASTER
+           SET BASE_NO = #{baseNo}
+         WHERE BASE_CD_TYPE  = #{type}
+           AND BASE_CONTENT1 = #{c1}
+           AND BASE_CONTENT2 = #{c2}
+    </update>
+
+    <!-- 벤더(005) 일련번호 덮어쓰기 (구 SP_UPDATE_SEQNO) -->
+    <update id="updateVendorBaseNo">
+        UPDATE T_SEQ_NO_MASTER
+           SET BASE_NO = #{baseNo}
+         WHERE BASE_CD_TYPE  = '005'
+           AND BASE_CONTENT1 = #{vendorCd}
+    </update>
+
+    <!-- 벤더(005) 일련번호 신규 삽입 (구 SP_UPDATE_SEQNO) -->
+    <insert id="insertVendor">
+        INSERT INTO T_SEQ_NO_MASTER (
+            BASE_CD_TYPE, BASE_CONTENT1, BASE_CONTENT2,
+            BASE_CONTENT3, BASE_CONTENT4, BASE_CONTENT5, BASE_NO
+        ) VALUES (
+            '005', #{vendorCd}, '0',
+            '0', '0', '0', #{baseNo}
+        )
+    </insert>
+
+</mapper>

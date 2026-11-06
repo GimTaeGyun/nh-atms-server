@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.nh.atms.web.code.mapper.CodeMapper">
+
+    <!-- T_CODE 전용 resultMap -->
+    <resultMap id="codeRm"  type="kr.co.nh.atms.web.code.entity.Code"      autoMapping="true"/>
+    <!-- T_CODE_GROUP 전용 resultMap -->
+    <resultMap id="groupRm" type="kr.co.nh.atms.web.code.entity.CodeGroup" autoMapping="true"/>
+
+    <!--
+        Oracle CHAR 컬럼(LANG_CD, GROUP_CD, CODE)은 고정 길이로 공백 패딩되어 저장됨.
+        JDBC는 파라미터를 VARCHAR2로 전송하므로 비패딩 비교가 적용되어
+        '002' ≠ '002  ' 가 되어 WHERE 매칭이 실패함.
+        SELECT 시 RTRIM으로 정규화, WHERE 시 RTRIM(column) = #{param} 으로 비교.
+    -->
+
+    <!-- T_CODE 전용 컬럼 목록 — CHAR 컬럼은 RTRIM 정규화 -->
+    <sql id="codeCols">
+        RTRIM(LANG_CD)  AS LANG_CD,
+        RTRIM(GROUP_CD) AS GROUP_CD,
+        RTRIM(CODE)     AS CODE,
+        NAME,
+        ORDER_NO
+    </sql>
+
+    <!-- T_CODE 전용 검색 조건 — CHAR 컬럼은 RTRIM(column) = #{param} -->
+    <sql id="codeWhere">
+        <where>
+            <if test="langCd != null and langCd != ''">AND RTRIM(LANG_CD) = #{langCd}</if>
+            <if test="groupCd != null and groupCd != ''">AND RTRIM(GROUP_CD) = #{groupCd}</if>
+            <if test="code != null and code != ''">AND RTRIM(CODE) = #{code}</if>
+            <if test="name != null and name != ''">AND NAME LIKE '%' || #{name} || '%'</if>
+        </where>
+    </sql>
+
+    <!-- T_CODE -->
+    <select id="selectCodeList" resultMap="codeRm">
+        SELECT <include refid="codeCols"/> FROM T_CODE
+        <include refid="codeWhere"/>
+        ORDER BY LANG_CD, GROUP_CD, ORDER_NO, CODE
+        OFFSET #{offset} ROWS FETCH NEXT #{limit} ROWS ONLY
+    </select>
+
+    <select id="countCodeList" resultType="long">
+        SELECT COUNT(*) FROM T_CODE <include refid="codeWhere"/>
+    </select>
+
+    <select id="selectCodeOne" resultMap="codeRm">
+        SELECT <include refid="codeCols"/>
+        FROM T_CODE
+        WHERE RTRIM(LANG_CD) = #{langCd} AND RTRIM(GROUP_CD) = #{groupCd} AND RTRIM(CODE) = #{code}
+    </select>
+
+    <select id="selectCodeByGroup" resultMap="codeRm">
+        SELECT <include refid="codeCols"/>
+        FROM T_CODE
+        WHERE RTRIM(LANG_CD) = #{langCd} AND RTRIM(GROUP_CD) = #{groupCd}
+        ORDER BY ORDER_NO, CODE
+    </select>
+
+    <insert id="insertCode" parameterType="kr.co.nh.atms.web.code.entity.Code">
+        INSERT INTO T_CODE (LANG_CD, GROUP_CD, CODE, NAME, ORDER_NO)
+        VALUES (#{langCd}, #{groupCd}, #{code}, #{name}, #{orderNo,jdbcType=INTEGER})
+    </insert>
+
+    <update id="updateCode" parameterType="kr.co.nh.atms.web.code.entity.Code">
+        UPDATE T_CODE
+        <set>
+            <if test="name != null">NAME = #{name},</if>
+            <if test="orderNo != null">ORDER_NO = #{orderNo},</if>
+        </set>
+        WHERE RTRIM(LANG_CD) = #{langCd} AND RTRIM(GROUP_CD) = #{groupCd} AND RTRIM(CODE) = #{code}
+    </update>
+
+    <delete id="deleteCode">
+        DELETE FROM T_CODE
+        WHERE RTRIM(LANG_CD) = #{langCd} AND RTRIM(GROUP_CD) = #{groupCd} AND RTRIM(CODE) = #{code}
+    </delete>
+
+    <!-- T_CODE_GROUP -->
+    <select id="selectGroupList" resultMap="groupRm">
+        SELECT RTRIM(LANG_CD) AS LANG_CD, RTRIM(GROUP_CD) AS GROUP_CD, GROUP_NAME
+        FROM T_CODE_GROUP
+        ORDER BY LANG_CD, GROUP_CD
+    </select>
+
+    <select id="selectGroupOne" resultType="kr.co.nh.atms.web.code.entity.CodeGroup">
+        SELECT RTRIM(LANG_CD)  AS langCd,
+               RTRIM(GROUP_CD) AS groupCd,
+               GROUP_NAME      AS groupName
+        FROM T_CODE_GROUP
+        WHERE RTRIM(LANG_CD) = #{langCd} AND RTRIM(GROUP_CD) = #{groupCd}
+    </select>
+
+    <insert id="insertGroup" parameterType="kr.co.nh.atms.web.code.entity.CodeGroup">
+        INSERT INTO T_CODE_GROUP (LANG_CD, GROUP_CD, GROUP_NAME)
+        VALUES (#{langCd}, #{groupCd}, #{groupName})
+    </insert>
+
+    <update id="updateGroup" parameterType="kr.co.nh.atms.web.code.entity.CodeGroup">
+        UPDATE T_CODE_GROUP
+        SET GROUP_NAME = #{groupName}
+        WHERE RTRIM(LANG_CD) = #{langCd} AND RTRIM(GROUP_CD) = #{groupCd}
+    </update>
+
+    <delete id="deleteGroup">
+        DELETE FROM T_CODE_GROUP
+        WHERE RTRIM(LANG_CD) = #{langCd} AND RTRIM(GROUP_CD) = #{groupCd}
+    </delete>
+
+    <select id="countCodesByGroup" resultType="int">
+        SELECT COUNT(*) FROM T_CODE
+        WHERE RTRIM(LANG_CD) = #{langCd} AND RTRIM(GROUP_CD) = #{groupCd}
+    </select>
+
+</mapper>

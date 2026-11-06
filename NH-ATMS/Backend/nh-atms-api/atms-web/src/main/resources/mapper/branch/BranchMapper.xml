@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.nh.atms.web.branch.mapper.BranchMapper">
+
+    <resultMap id="BranchResultMap" type="kr.co.nh.atms.web.branch.entity.Branch" autoMapping="true"/>
+
+    <sql id="cols">
+        TERM_GROUP_ID, BRANCH_CD, BRANCH_NAME, BRANCH_TYPE_CD,
+        ZIPCODE, ADDRESS, DETAIL_ADDRESS, PHONE_NO, FAX_NO,
+        PARTNER_CD, BLNG_SOTY_CD, SOTY_NM, TERM_GROUP_NAME, ADDR_SEQ
+    </sql>
+
+    <sql id="searchWhere">
+        <where>
+            <if test="termGroupId != null and termGroupId != ''">
+                AND TERM_GROUP_ID = #{termGroupId}
+            </if>
+            <if test="branchCd != null and branchCd != ''">
+                AND BRANCH_CD LIKE '%' || #{branchCd} || '%'
+            </if>
+            <if test="branchName != null and branchName != ''">
+                AND BRANCH_NAME LIKE '%' || #{branchName} || '%'
+            </if>
+            <if test="branchTypeCd != null and branchTypeCd != ''">
+                AND BRANCH_TYPE_CD = #{branchTypeCd}
+            </if>
+        </where>
+    </sql>
+
+    <select id="selectList" resultMap="BranchResultMap">
+        SELECT <include refid="cols"/>
+        FROM T_BRANCH
+        <include refid="searchWhere"/>
+        ORDER BY TERM_GROUP_ID, BRANCH_CD
+        OFFSET #{offset} ROWS FETCH NEXT #{limit} ROWS ONLY
+    </select>
+
+    <select id="countList" resultType="long">
+        SELECT COUNT(*) FROM T_BRANCH
+        <include refid="searchWhere"/>
+    </select>
+
+    <select id="selectOne" resultMap="BranchResultMap">
+        SELECT <include refid="cols"/>
+        FROM T_BRANCH
+        WHERE TERM_GROUP_ID = #{termGroupId}
+          AND BRANCH_CD     = #{branchCd}
+          AND BRANCH_NAME   = #{branchName}
+    </select>
+
+    <insert id="insert" parameterType="kr.co.nh.atms.web.branch.entity.Branch">
+        INSERT INTO T_BRANCH (
+            TERM_GROUP_ID, BRANCH_CD, BRANCH_NAME, BRANCH_TYPE_CD,
+            ZIPCODE, ADDRESS, DETAIL_ADDRESS, PHONE_NO, FAX_NO,
+            TERM_GROUP_NAME
+        ) VALUES (
+            #{termGroupId}, #{branchCd}, #{branchName}, #{branchTypeCd},
+            #{zipcode}, #{address}, #{detailAddress}, #{phoneNo}, #{faxNo},
+            #{termGroupName}
+        )
+    </insert>
+
+    <update id="update" parameterType="kr.co.nh.atms.web.branch.entity.Branch">
+        UPDATE T_BRANCH
+        <set>
+            <if test="branchTypeCd != null">BRANCH_TYPE_CD = #{branchTypeCd},</if>
+            <if test="zipcode != null">ZIPCODE = #{zipcode},</if>
+            <if test="address != null">ADDRESS = #{address},</if>
+            <if test="detailAddress != null">DETAIL_ADDRESS = #{detailAddress},</if>
+            <if test="phoneNo != null">PHONE_NO = #{phoneNo},</if>
+            <if test="faxNo != null">FAX_NO = #{faxNo},</if>
+            <if test="termGroupName != null">TERM_GROUP_NAME = #{termGroupName},</if>
+        </set>
+        WHERE TERM_GROUP_ID = #{termGroupId}
+          AND BRANCH_CD     = #{branchCd}
+          AND BRANCH_NAME   = #{branchName}
+    </update>
+
+    <delete id="delete">
+        DELETE FROM T_BRANCH
+        WHERE TERM_GROUP_ID = #{termGroupId}
+          AND BRANCH_CD     = #{branchCd}
+          AND BRANCH_NAME   = #{branchName}
+    </delete>
+
+</mapper>

@@ -1,0 +1,333 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.nh.atms.batch.mapper.Batday01Mapper">
+
+    <!-- =================================================================
+         batday01 : 장애율/가동률 집계 — AS-IS atmb sqlmap/batday01.xml 이식
+         TO-BE 스키마 대응:
+           t_atm            → T_ATM
+           t_corner         → T_CORNER (조인키: TERM_GROUP_ID + CORNER_CD,
+                              AS-IS 의 branch_cd 조인은 TO-BE PK 구조에 맞춰 대체)
+           t_faultanalysis  → T_FAULT_ANALYSIS (time_elapsed 컬럼 부재 →
+                              발생~복구 일시 차이(초)를 인라인 산출)
+           t_atmstophistory → T_ATM_STOP_HISTORY
+           t_transactionjournal → T_TRANSACTION_JOURNAL
+         ================================================================= -->
+
+    <select id="countRunHistoryTarget" resultType="long">
+        SELECT COUNT(*)
+          FROM T_ATM a
+               INNER JOIN T_CORNER c
+                       ON a.TERM_GROUP_ID = c.TERM_GROUP_ID
+                      AND TRIM(a.CORNER_CD) = c.CORNER_CD
+         WHERE a.PROTOCOL_TYPE = 'T'
+           AND a.ASSET_FLAG IN ('1', '2', '3')
+           AND a.ATM_STATUS = '1'
+    </select>
+
+    <delete id="deleteRunHistory">
+        DELETE FROM T_ATM_RUN_HISTORY WHERE BASE_DATE = #{baseDate}
+    </delete>
+
+    <delete id="deleteErrGroupHistory">
+        DELETE FROM T_ATM_ERR_GROUP_HISTORY WHERE BASE_DATE = #{baseDate}
+    </delete>
+
+    <!-- T_FAULT_ANALYSIS 경과시간(초) 인라인 산출:
+         AS-IS 는 온라인 처리에서 적재한 time_elapsed 를 사용했으나
+         TO-BE 스키마에는 해당 컬럼이 없어 복구일시-발생일시 차이로 등가 산출.
+         미복구(FINISHED_DATE IS NULL) 건은 0 (AS-IS 도 미복구 시 0 적재). -->
+    <sql id="faultElapsedExpr">
+        CASE WHEN FINISHED_DATE IS NOT NULL AND FINISHED_TIME IS NOT NULL
+             THEN GREATEST(0, ROUND(
+                    ( TO_DATE(FINISHED_DATE || LPAD(FINISHED_TIME, 6, '0'), 'YYYYMMDDHH24MISS')
+                    - TO_DATE(JNL_DATE      || LPAD(JNL_TIME,      6, '0'), 'YYYYMMDDHH24MISS')
+                    ) * 86400))
+             ELSE 0 END
+    </sql>
+
+    <!-- AS-IS sel_faultdata : 대상 기기 + 디바이스별/분류별 장애 건수·시간 + 개국시간 -->
+    <select id="selectFaultData" resultType="kr.co.nh.atms.batch.dto.RunHistoryRow"
+            fetchSize="500" resultSetType="FORWARD_ONLY">
+        SELECT #{baseDate}                    AS base_date
+             , t1.TERM_GROUP_ID               AS term_group_id
+             , t1.TERM_ID                     AS term_id
+             , t1.CORNER_CD                   AS corner_cd
+             , t1.CORNER_TYPE_CD              AS corner_type_cd
+             , t1.OPERATION_TYPE_CD           AS operation_type_cd
+             , t1.LOCATION_TYPE_CD            AS location_type_cd
+             , t1.AREA_CD                     AS area_cd
+             , t1.SERVICE_START_TIME          AS service_start_time
+             , t1.SERVICE_END_TIME            AS service_end_time
+             , t1.ATM_CO_CD                   AS atm_co_cd
+             , t1.MODEL_CD                    AS model_cd
+             , t1.SECURITY_PROVIDER_CD        AS security_provider_cd
+             , t1.SERVICE_PROVIDER_CD         AS service_provider_cd
+             , t4.OPEN_TIME                   AS open_time
+             , 0                              AS total_target_time
+             , 0                              AS total_run_time
+             , 0                              AS delay_open_time
+             , NVL(t2.SPR_PTR_CNT , 0) AS spr_fault_cnt      , NVL(t2.SPR_PTR_TIME , 0) AS spr_fault_time
+             , NVL(t2.PB_PTR_CNT  , 0) AS pb_fault_cnt       , NVL(t2.PB_PTR_TIME  , 0) AS pb_fault_time
+             , NVL(t2.JPR_PTR_CNT , 0) AS jpr_fault_cnt      , NVL(t2.JPR_PTR_TIME , 0) AS jpr_fault_time
+             , NVL(t2.DOC_PTR_CNT , 0) AS doc_fault_cnt      , NVL(t2.DOC_PTR_TIME , 0) AS doc_fault_time
+             , NVL(t2.SCN_PTR_CNT , 0) AS scn_fault_cnt      , NVL(t2.SCN_PTR_TIME , 0) AS scn_fault_time
+             , NVL(t2.IDC_CNT     , 0) AS idc_fault_cnt      , NVL(t2.IDC_TIME     , 0) AS idc_fault_time
+             , NVL(t2.CDM_BILL_CNT, 0) AS cdm_bill_fault_cnt , NVL(t2.CDM_BILL_TIME, 0) AS cdm_bill_fault_time
+             , NVL(t2.CDM_COIN_CNT, 0) AS cdm_coin_fault_cnt , NVL(t2.CDM_COIN_TIME, 0) AS cdm_coin_fault_time
+             , NVL(t2.PIN_CNT     , 0) AS pin_fault_cnt      , NVL(t2.PIN_TIME     , 0) AS pin_fault_time
+             , NVL(t2.CHK_CNT     , 0) AS chk_fault_cnt      , NVL(t2.CHK_TIME     , 0) AS chk_fault_time
+             , NVL(t2.DEP_CNT     , 0) AS dep_fault_cnt      , NVL(t2.DEP_TIME     , 0) AS dep_fault_time
+             , NVL(t2.TTU_CNT     , 0) AS ttu_fault_cnt      , NVL(t2.TTU_TIME     , 0) AS ttu_fault_time
+             , NVL(t2.SIU_CNT     , 0) AS siu_fault_cnt      , NVL(t2.SIU_TIME     , 0) AS siu_fault_time
+             , NVL(t2.VDM_CNT     , 0) AS vdm_fault_cnt      , NVL(t2.VDM_TIME     , 0) AS vdm_fault_time
+             , NVL(t2.CAM_CNT     , 0) AS cam_fault_cnt      , NVL(t2.CAM_TIME     , 0) AS cam_fault_time
+             , NVL(t2.ALM_CNT     , 0) AS alm_fault_cnt      , NVL(t2.ALM_TIME     , 0) AS alm_fault_time
+             , NVL(t2.CEU_CNT     , 0) AS ceu_fault_cnt      , NVL(t2.CEU_TIME     , 0) AS ceu_fault_time
+             , NVL(t2.CIM_BILL_CNT, 0) AS cim_bill_fault_cnt , NVL(t2.CIM_BILL_TIME, 0) AS cim_bill_fault_time
+             , NVL(t2.CIM_COIN_CNT, 0) AS cim_coin_fault_cnt , NVL(t2.CIM_COIN_TIME, 0) AS cim_coin_fault_time
+             , NVL(t2.CRD_CNT     , 0) AS crd_fault_cnt      , NVL(t2.CRD_TIME     , 0) AS crd_fault_time
+             , NVL(t2.BCR_CNT     , 0) AS bcr_fault_cnt      , NVL(t2.BCR_TIME     , 0) AS bcr_fault_time
+             , NVL(t2.IPM_CNT     , 0) AS ipm_fault_cnt      , NVL(t2.IPM_TIME     , 0) AS ipm_fault_time
+             , NVL(t2.AP_CNT      , 0) AS ap_fault_cnt       , NVL(t2.AP_TIME      , 0) AS ap_fault_time
+             , NVL(t3.HW_ERR_CNT  , 0) AS machine_fault_cnt  , NVL(t3.HW_ERR_TIME  , 0) AS machine_fault_time
+             , NVL(t3.OP_ERR_CNT  , 0) AS operation_fault_cnt, NVL(t3.OP_ERR_TIME  , 0) AS operation_fault_time
+             , NVL(t3.TELL_ERR_CNT, 0) AS emp_fault_cnt      , NVL(t3.TELL_ERR_TIME, 0) AS emp_fault_time
+             , NVL(t3.USER_ERR_CNT, 0) AS cus_fault_cnt      , NVL(t3.USER_ERR_TIME, 0) AS cus_fault_time
+             , NVL(t3.NET_ERR_CNT , 0) AS net_fault_cnt      , NVL(t3.NET_ERR_TIME , 0) AS net_fault_time
+             , NVL(t3.ETC_ERR_CNT , 0) AS etc_fault_cnt      , NVL(t3.ETC_ERR_TIME , 0) AS etc_fault_time
+             , 0                       AS transaction_cnt
+          FROM (
+                 <!-- t1: 기본 단말기 및 코너 정보 -->
+                 SELECT a.TERM_GROUP_ID
+                      , a.TERM_ID
+                      , a.ASSET_FLAG
+                      , a.ATM_STATUS
+                      , a.ATM_CO_CD
+                      , a.MODEL_CD
+                      , c.CORNER_CD
+                      , c.CORNER_TYPE_CD
+                      , c.OPERATION_TYPE_CD
+                      , c.LOCATION_TYPE_CD
+                      , c.SERVICE_START_TIME
+                      , c.SERVICE_END_TIME
+                      , c.OUTSRC_CO_CD AS SERVICE_PROVIDER_CD
+                      , c.GUARD_CO_CD  AS SECURITY_PROVIDER_CD
+                      , c.AREA1_CD     AS AREA_CD
+                   FROM T_ATM a
+                        INNER JOIN T_CORNER c
+                                ON a.TERM_GROUP_ID   = c.TERM_GROUP_ID
+                               AND TRIM(a.CORNER_CD) = c.CORNER_CD
+                  WHERE a.PROTOCOL_TYPE = 'T'
+               ) t1
+               LEFT JOIN (
+                 <!-- t2: 디바이스별 장애 건수 및 시간 -->
+                 SELECT TERM_GROUP_ID
+                      , TERM_ID
+                      , SUM(CASE WHEN DEVICE_ID = '1' THEN 1 ELSE 0 END) AS SPR_PTR_CNT , SUM(CASE WHEN DEVICE_ID = '1' THEN TIME_ELAPSED ELSE 0 END) AS SPR_PTR_TIME
+                      , SUM(CASE WHEN DEVICE_ID = '2' THEN 1 ELSE 0 END) AS JPR_PTR_CNT , SUM(CASE WHEN DEVICE_ID = '2' THEN TIME_ELAPSED ELSE 0 END) AS JPR_PTR_TIME
+                      , SUM(CASE WHEN DEVICE_ID = '3' THEN 1 ELSE 0 END) AS PB_PTR_CNT  , SUM(CASE WHEN DEVICE_ID = '3' THEN TIME_ELAPSED ELSE 0 END) AS PB_PTR_TIME
+                      , SUM(CASE WHEN DEVICE_ID = '4' THEN 1 ELSE 0 END) AS DOC_PTR_CNT , SUM(CASE WHEN DEVICE_ID = '4' THEN TIME_ELAPSED ELSE 0 END) AS DOC_PTR_TIME
+                      , SUM(CASE WHEN DEVICE_ID = '5' THEN 1 ELSE 0 END) AS SCN_PTR_CNT , SUM(CASE WHEN DEVICE_ID = '5' THEN TIME_ELAPSED ELSE 0 END) AS SCN_PTR_TIME
+                      , SUM(CASE WHEN DEVICE_ID = '6' THEN 1 ELSE 0 END) AS IDC_CNT     , SUM(CASE WHEN DEVICE_ID = '6' THEN TIME_ELAPSED ELSE 0 END) AS IDC_TIME
+                      , SUM(CASE WHEN DEVICE_ID = '7' THEN 1 ELSE 0 END) AS CDM_BILL_CNT, SUM(CASE WHEN DEVICE_ID = '7' THEN TIME_ELAPSED ELSE 0 END) AS CDM_BILL_TIME
+                      , SUM(CASE WHEN DEVICE_ID = '8' THEN 1 ELSE 0 END) AS CDM_COIN_CNT, SUM(CASE WHEN DEVICE_ID = '8' THEN TIME_ELAPSED ELSE 0 END) AS CDM_COIN_TIME
+                      , SUM(CASE WHEN DEVICE_ID = '9' THEN 1 ELSE 0 END) AS CHK_CNT     , SUM(CASE WHEN DEVICE_ID = '9' THEN TIME_ELAPSED ELSE 0 END) AS CHK_TIME
+                      , SUM(CASE WHEN DEVICE_ID = 'A' THEN 1 ELSE 0 END) AS PIN_CNT     , SUM(CASE WHEN DEVICE_ID = 'A' THEN TIME_ELAPSED ELSE 0 END) AS PIN_TIME
+                      , SUM(CASE WHEN DEVICE_ID = 'C' THEN 1 ELSE 0 END) AS DEP_CNT     , SUM(CASE WHEN DEVICE_ID = 'C' THEN TIME_ELAPSED ELSE 0 END) AS DEP_TIME
+                      , SUM(CASE WHEN DEVICE_ID = 'D' THEN 1 ELSE 0 END) AS TTU_CNT     , SUM(CASE WHEN DEVICE_ID = 'D' THEN TIME_ELAPSED ELSE 0 END) AS TTU_TIME
+                      , SUM(CASE WHEN DEVICE_ID = 'E' THEN 1 ELSE 0 END) AS SIU_CNT     , SUM(CASE WHEN DEVICE_ID = 'E' THEN TIME_ELAPSED ELSE 0 END) AS SIU_TIME
+                      , SUM(CASE WHEN DEVICE_ID = 'F' THEN 1 ELSE 0 END) AS VDM_CNT     , SUM(CASE WHEN DEVICE_ID = 'F' THEN TIME_ELAPSED ELSE 0 END) AS VDM_TIME
+                      , SUM(CASE WHEN DEVICE_ID = 'G' THEN 1 ELSE 0 END) AS CAM_CNT     , SUM(CASE WHEN DEVICE_ID = 'G' THEN TIME_ELAPSED ELSE 0 END) AS CAM_TIME
+                      , SUM(CASE WHEN DEVICE_ID = 'H' THEN 1 ELSE 0 END) AS ALM_CNT     , SUM(CASE WHEN DEVICE_ID = 'H' THEN TIME_ELAPSED ELSE 0 END) AS ALM_TIME
+                      , SUM(CASE WHEN DEVICE_ID = 'I' THEN 1 ELSE 0 END) AS CEU_CNT     , SUM(CASE WHEN DEVICE_ID = 'I' THEN TIME_ELAPSED ELSE 0 END) AS CEU_TIME
+                      , SUM(CASE WHEN DEVICE_ID = 'J' THEN 1 ELSE 0 END) AS CIM_BILL_CNT, SUM(CASE WHEN DEVICE_ID = 'J' THEN TIME_ELAPSED ELSE 0 END) AS CIM_BILL_TIME
+                      , SUM(CASE WHEN DEVICE_ID = 'K' THEN 1 ELSE 0 END) AS CIM_COIN_CNT, SUM(CASE WHEN DEVICE_ID = 'K' THEN TIME_ELAPSED ELSE 0 END) AS CIM_COIN_TIME
+                      , SUM(CASE WHEN DEVICE_ID = 'L' THEN 1 ELSE 0 END) AS CRD_CNT     , SUM(CASE WHEN DEVICE_ID = 'L' THEN TIME_ELAPSED ELSE 0 END) AS CRD_TIME
+                      , SUM(CASE WHEN DEVICE_ID = 'M' THEN 1 ELSE 0 END) AS BCR_CNT     , SUM(CASE WHEN DEVICE_ID = 'M' THEN TIME_ELAPSED ELSE 0 END) AS BCR_TIME
+                      , SUM(CASE WHEN DEVICE_ID = 'N' THEN 1 ELSE 0 END) AS IPM_CNT     , SUM(CASE WHEN DEVICE_ID = 'N' THEN TIME_ELAPSED ELSE 0 END) AS IPM_TIME
+                      , SUM(CASE WHEN TRIM(DEVICE_ID) IS NULL THEN 1 ELSE 0 END) AS AP_CNT
+                      , SUM(CASE WHEN TRIM(DEVICE_ID) IS NULL THEN TIME_ELAPSED ELSE 0 END) AS AP_TIME
+                   FROM (
+                          SELECT TERM_GROUP_ID, TERM_ID, DEVICE_ID,
+                                 <include refid="faultElapsedExpr"/> AS TIME_ELAPSED
+                            FROM T_FAULT_ANALYSIS
+                           WHERE JNL_DATE = #{baseDate}
+                             AND NVL(TRIM(FAULT_CLASS_CD), '00') NOT LIKE 'ZZ%'
+                        )
+                  GROUP BY TERM_GROUP_ID, TERM_ID
+               ) t2
+                 ON  t1.TERM_GROUP_ID = t2.TERM_GROUP_ID
+                AND t1.TERM_ID       = t2.TERM_ID
+               LEFT JOIN (
+                 <!-- t3: 장애 분류별 건수 및 시간 -->
+                 SELECT TERM_GROUP_ID
+                      , TERM_ID
+                      , SUM(CASE WHEN FAULT_CLASS_CD = '01' THEN 1 ELSE 0 END) AS HW_ERR_CNT  , SUM(CASE WHEN FAULT_CLASS_CD = '01' THEN TIME_ELAPSED ELSE 0 END) AS HW_ERR_TIME
+                      , SUM(CASE WHEN FAULT_CLASS_CD = '02' THEN 1 ELSE 0 END) AS OP_ERR_CNT  , SUM(CASE WHEN FAULT_CLASS_CD = '02' THEN TIME_ELAPSED ELSE 0 END) AS OP_ERR_TIME
+                      , SUM(CASE WHEN FAULT_CLASS_CD = '03' THEN 1 ELSE 0 END) AS TELL_ERR_CNT, SUM(CASE WHEN FAULT_CLASS_CD = '03' THEN TIME_ELAPSED ELSE 0 END) AS TELL_ERR_TIME
+                      , SUM(CASE WHEN FAULT_CLASS_CD = '04' THEN 1 ELSE 0 END) AS USER_ERR_CNT, SUM(CASE WHEN FAULT_CLASS_CD = '04' THEN TIME_ELAPSED ELSE 0 END) AS USER_ERR_TIME
+                      , SUM(CASE WHEN FAULT_CLASS_CD = '05' THEN 1 ELSE 0 END) AS NET_ERR_CNT , SUM(CASE WHEN FAULT_CLASS_CD = '05' THEN TIME_ELAPSED ELSE 0 END) AS NET_ERR_TIME
+                      , SUM(CASE WHEN FAULT_CLASS_CD = '99' THEN 1 ELSE 0 END) AS ETC_ERR_CNT , SUM(CASE WHEN FAULT_CLASS_CD = '99' THEN TIME_ELAPSED ELSE 0 END) AS ETC_ERR_TIME
+                   FROM (
+                          SELECT TERM_GROUP_ID, TERM_ID, FAULT_CLASS_CD,
+                                 <include refid="faultElapsedExpr"/> AS TIME_ELAPSED
+                            FROM T_FAULT_ANALYSIS
+                           WHERE JNL_DATE = #{baseDate}
+                             AND NVL(TRIM(FAULT_CLASS_CD), '00') NOT LIKE 'ZZ%'
+                        )
+                  GROUP BY TERM_GROUP_ID, TERM_ID
+               ) t3
+                 ON  t1.TERM_GROUP_ID = t3.TERM_GROUP_ID
+                AND t1.TERM_ID       = t3.TERM_ID
+               LEFT JOIN (
+                 <!-- t4: 개국 시간 (당일 첫 FO 저널. AS-IS 는 단순 조인이었으나
+                          복수 개국 저널로 인한 행 중복을 막기 위해 MIN 사용) -->
+                 SELECT TERM_GROUP_ID
+                      , TERM_ID
+                      , MIN(JNL_TIME) AS OPEN_TIME
+                   FROM T_ATM_STOP_HISTORY
+                  WHERE JNL_DATE = #{baseDate}
+                    AND ERR_GROUP_CD = 'FO'
+                  GROUP BY TERM_GROUP_ID, TERM_ID
+               ) t4
+                 ON  t1.TERM_GROUP_ID = t4.TERM_GROUP_ID
+                AND t1.TERM_ID       = t4.TERM_ID
+         WHERE t1.ASSET_FLAG IN ('1', '2', '3')
+           AND t1.ATM_STATUS = '1'
+    </select>
+
+    <!-- AS-IS sel_t_atmstophistory : 당일 발생 장애 (개국 FO 제외) -->
+    <select id="selectStopHistoryOfDay" resultType="kr.co.nh.atms.batch.dto.StopHistoryRow">
+        SELECT JNL_DATE      AS jnl_date
+             , JNL_TIME      AS jnl_time
+             , FINISHED_DATE AS finished_date
+             , FINISHED_TIME AS finished_time
+             , DEVICE_ID     AS device_id
+             , ERR_GROUP_CD  AS err_group_cd
+          FROM T_ATM_STOP_HISTORY
+         WHERE TERM_GROUP_ID = #{termGroupId}
+           AND TERM_ID       = #{termId}
+           AND JNL_DATE      = #{baseDate}
+           AND ERR_GROUP_CD != 'FO'
+         ORDER BY JNL_DATE, JNL_TIME
+    </select>
+
+    <!-- AS-IS sel_t_atmstophistory_before : 대상일 이전 발생 + 대상일 복구 장애 -->
+    <select id="selectStopHistoryBefore" resultType="kr.co.nh.atms.batch.dto.StopHistoryRow">
+        SELECT ERR_GROUP_CD  AS err_group_cd
+             , DEVICE_ID     AS device_id
+             , FINISHED_TIME AS finished_time
+          FROM T_ATM_STOP_HISTORY
+         WHERE TERM_GROUP_ID = #{termGroupId}
+           AND TERM_ID       = #{termId}
+           AND JNL_DATE      &lt; #{baseDate}
+           AND FINISHED_DATE = #{baseDate}
+         ORDER BY JNL_DATE, JNL_TIME
+    </select>
+
+    <!-- AS-IS sel_t_transactionjournal : 당일 거래건수 (무통장/무카드 확인(0131) 제외) -->
+    <select id="countTransactions" resultType="long">
+        SELECT COUNT(*)
+          FROM T_TRANSACTION_JOURNAL
+         WHERE TERM_GROUP_ID = #{termGroupId}
+           AND TERM_ID       = #{termId}
+           AND JNL_DATE      = #{baseDate}
+           AND TR_TYPE NOT IN ('0131')
+    </select>
+
+    <insert id="insertRunHistory" parameterType="kr.co.nh.atms.batch.dto.RunHistoryRow">
+        INSERT INTO T_ATM_RUN_HISTORY (
+            BASE_DATE, TERM_GROUP_ID, TERM_ID, CORNER_CD, CORNER_TYPE_CD,
+            OPERATION_TYPE_CD, LOCATION_TYPE_CD, AREA_CD,
+            SERVICE_START_TIME, SERVICE_END_TIME,
+            ATM_CO_CD, MODEL_CD, SECURITY_PROVIDER_CD, SERVICE_PROVIDER_CD, OPEN_TIME,
+            TOTAL_TARGET_TIME, TOTAL_RUN_TIME, DELAY_OPEN_TIME,
+            SPR_FAULT_CNT      , SPR_FAULT_TIME,
+            PB_FAULT_CNT       , PB_FAULT_TIME,
+            JPR_FAULT_CNT      , JPR_FAULT_TIME,
+            DOC_FAULT_CNT      , DOC_FAULT_TIME,
+            SCN_FAULT_CNT      , SCN_FAULT_TIME,
+            IDC_FAULT_CNT      , IDC_FAULT_TIME,
+            CDM_BILL_FAULT_CNT , CDM_BILL_FAULT_TIME,
+            CDM_COIN_FAULT_CNT , CDM_COIN_FAULT_TIME,
+            PIN_FAULT_CNT      , PIN_FAULT_TIME,
+            CHK_FAULT_CNT      , CHK_FAULT_TIME,
+            DEP_FAULT_CNT      , DEP_FAULT_TIME,
+            TTU_FAULT_CNT      , TTU_FAULT_TIME,
+            SIU_FAULT_CNT      , SIU_FAULT_TIME,
+            VDM_FAULT_CNT      , VDM_FAULT_TIME,
+            CAM_FAULT_CNT      , CAM_FAULT_TIME,
+            ALM_FAULT_CNT      , ALM_FAULT_TIME,
+            CEU_FAULT_CNT      , CEU_FAULT_TIME,
+            CIM_BILL_FAULT_CNT , CIM_BILL_FAULT_TIME,
+            CIM_COIN_FAULT_CNT , CIM_COIN_FAULT_TIME,
+            CRD_FAULT_CNT      , CRD_FAULT_TIME,
+            BCR_FAULT_CNT      , BCR_FAULT_TIME,
+            IPM_FAULT_CNT      , IPM_FAULT_TIME,
+            AP_FAULT_CNT       , AP_FAULT_TIME,
+            MACHINE_FAULT_CNT  , MACHINE_FAULT_TIME,
+            OPERATION_FAULT_CNT, OPERATION_FAULT_TIME,
+            EMP_FAULT_CNT      , EMP_FAULT_TIME,
+            CUS_FAULT_CNT      , CUS_FAULT_TIME,
+            NET_FAULT_CNT      , NET_FAULT_TIME,
+            ETC_FAULT_CNT      , ETC_FAULT_TIME,
+            TRANSACTION_CNT, REG_DT
+        ) VALUES (
+            #{baseDate}, #{termGroupId}, #{termId}, #{cornerCd}, #{cornerTypeCd},
+            #{operationTypeCd}, #{locationTypeCd}, #{areaCd},
+            #{serviceStartTime}, #{serviceEndTime},
+            #{atmCoCd}, #{modelCd}, #{securityProviderCd}, #{serviceProviderCd}, #{openTime},
+            #{totalTargetTime}, #{totalRunTime}, #{delayOpenTime},
+            #{sprFaultCnt}      , #{sprFaultTime},
+            #{pbFaultCnt}       , #{pbFaultTime},
+            #{jprFaultCnt}      , #{jprFaultTime},
+            #{docFaultCnt}      , #{docFaultTime},
+            #{scnFaultCnt}      , #{scnFaultTime},
+            #{idcFaultCnt}      , #{idcFaultTime},
+            #{cdmBillFaultCnt}  , #{cdmBillFaultTime},
+            #{cdmCoinFaultCnt}  , #{cdmCoinFaultTime},
+            #{pinFaultCnt}      , #{pinFaultTime},
+            #{chkFaultCnt}      , #{chkFaultTime},
+            #{depFaultCnt}      , #{depFaultTime},
+            #{ttuFaultCnt}      , #{ttuFaultTime},
+            #{siuFaultCnt}      , #{siuFaultTime},
+            #{vdmFaultCnt}      , #{vdmFaultTime},
+            #{camFaultCnt}      , #{camFaultTime},
+            #{almFaultCnt}      , #{almFaultTime},
+            #{ceuFaultCnt}      , #{ceuFaultTime},
+            #{cimBillFaultCnt}  , #{cimBillFaultTime},
+            #{cimCoinFaultCnt}  , #{cimCoinFaultTime},
+            #{crdFaultCnt}      , #{crdFaultTime},
+            #{bcrFaultCnt}      , #{bcrFaultTime},
+            #{ipmFaultCnt}      , #{ipmFaultTime},
+            #{apFaultCnt}       , #{apFaultTime},
+            #{machineFaultCnt}  , #{machineFaultTime},
+            #{operationFaultCnt}, #{operationFaultTime},
+            #{empFaultCnt}      , #{empFaultTime},
+            #{cusFaultCnt}      , #{cusFaultTime},
+            #{netFaultCnt}      , #{netFaultTime},
+            #{etcFaultCnt}      , #{etcFaultTime},
+            #{transactionCnt}, CURRENT_TIMESTAMP
+        )
+    </insert>
+
+    <!-- AS-IS ins_t_atmerrgrouphistory_from_select : 기기·장애그룹별 장애건수 -->
+    <insert id="insertErrGroupHistory">
+        INSERT INTO T_ATM_ERR_GROUP_HISTORY (
+            BASE_DATE, TERM_GROUP_ID, TERM_ID, ERR_GROUP_CD, FAULT_CNT, FAULT_TIME, REG_DT
+        )
+        SELECT #{baseDate}
+             , TERM_GROUP_ID
+             , TERM_ID
+             , NVL(ERR_GROUP_CD, ' ')
+             , COUNT(*)
+             , 0
+             , CURRENT_TIMESTAMP
+          FROM T_FAULT_ANALYSIS
+         WHERE JNL_DATE = #{baseDate}
+         GROUP BY TERM_GROUP_ID, TERM_ID, NVL(ERR_GROUP_CD, ' ')
+    </insert>
+
+</mapper>

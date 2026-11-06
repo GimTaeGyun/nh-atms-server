@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.nh.atms.journal.mapper.BranchWriteMapper">
+
+    <!-- 조합(term_group_id)별 영업점 존재 건수 (atmr select_count_T_BRANCH) -->
+    <select id="countByGroup" resultType="int">
+        SELECT COUNT(1)
+          FROM T_BRANCH
+         WHERE TERM_GROUP_ID = #{termGroupId,jdbcType=CHAR}
+    </select>
+
+    <!-- 임시 영업점 등록 (atmr insert_ignore_T_BRANCH. PK 중복 시 무시) -->
+    <insert id="insertIgnore">
+        MERGE INTO T_BRANCH t
+        USING (SELECT #{termGroupId,jdbcType=CHAR} AS TERM_GROUP_ID,
+                      #{branchCd,jdbcType=VARCHAR} AS BRANCH_CD,
+                      #{branchName,jdbcType=VARCHAR} AS BRANCH_NAME
+                 FROM dual) s
+           ON (t.TERM_GROUP_ID = s.TERM_GROUP_ID
+               AND t.BRANCH_CD = s.BRANCH_CD
+               AND t.BRANCH_NAME = s.BRANCH_NAME)
+        WHEN NOT MATCHED THEN
+            INSERT (TERM_GROUP_ID, BRANCH_CD, BRANCH_NAME, BRANCH_TYPE_CD)
+            VALUES (#{termGroupId,jdbcType=CHAR}, #{branchCd,jdbcType=VARCHAR},
+                    #{branchName,jdbcType=VARCHAR}, #{branchTypeCd,jdbcType=CHAR})
+    </insert>
+
+</mapper>

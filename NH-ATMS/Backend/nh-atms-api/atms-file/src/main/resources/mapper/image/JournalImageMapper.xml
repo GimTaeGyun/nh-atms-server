@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.nh.atms.file.image.mapper.JournalImageMapper">
+
+    <resultMap id="imageMap" type="kr.co.nh.atms.file.image.entity.JournalImage">
+        <id     property="termGroupId" column="TERM_GROUP_ID"/>
+        <id     property="termId"      column="TERM_ID"/>
+        <id     property="jnlDate"     column="JNL_DATE"/>
+        <id     property="jnlTime"     column="JNL_TIME"/>
+        <id     property="imageType"   column="IMAGE_TYPE"/>
+        <result property="imagePath"   column="IMAGE_PATH"/>
+    </resultMap>
+
+    <update id="upsert" parameterType="kr.co.nh.atms.file.image.entity.JournalImage">
+        MERGE INTO T_JOURNAL_IMAGE t
+        USING (
+            SELECT
+                #{termGroupId,jdbcType=CHAR}  AS TERM_GROUP_ID,
+                #{termId,jdbcType=VARCHAR}    AS TERM_ID,
+                #{jnlDate,jdbcType=CHAR}      AS JNL_DATE,
+                #{jnlTime,jdbcType=CHAR}      AS JNL_TIME,
+                #{imageType,jdbcType=CHAR}    AS IMAGE_TYPE
+            FROM DUAL
+        ) s
+        ON (    t.TERM_GROUP_ID = s.TERM_GROUP_ID
+            AND t.TERM_ID       = s.TERM_ID
+            AND t.JNL_DATE      = s.JNL_DATE
+            AND t.JNL_TIME      = s.JNL_TIME
+            AND t.IMAGE_TYPE    = s.IMAGE_TYPE )
+        WHEN MATCHED THEN UPDATE SET
+            t.IMAGE_PATH = #{imagePath,jdbcType=VARCHAR}
+        WHEN NOT MATCHED THEN INSERT (
+            TERM_GROUP_ID, TERM_ID, JNL_DATE, JNL_TIME, IMAGE_TYPE, IMAGE_PATH
+        ) VALUES (
+            #{termGroupId,jdbcType=CHAR},  #{termId,jdbcType=VARCHAR},
+            #{jnlDate,jdbcType=CHAR},      #{jnlTime,jdbcType=CHAR},
+            #{imageType,jdbcType=CHAR},    #{imagePath,jdbcType=VARCHAR}
+        )
+    </update>
+
+    <select id="selectByJournal" resultMap="imageMap">
+        SELECT TERM_GROUP_ID, TERM_ID, JNL_DATE, JNL_TIME, IMAGE_TYPE, IMAGE_PATH
+        FROM T_JOURNAL_IMAGE
+        WHERE TERM_GROUP_ID = #{termGroupId}
+          AND TERM_ID       = #{termId}
+          AND JNL_DATE      = #{jnlDate}
+          AND JNL_TIME      = #{jnlTime}
+        ORDER BY IMAGE_TYPE
+    </select>
+
+    <select id="selectOne" resultMap="imageMap">
+        SELECT TERM_GROUP_ID, TERM_ID, JNL_DATE, JNL_TIME, IMAGE_TYPE, IMAGE_PATH
+        FROM T_JOURNAL_IMAGE
+        WHERE TERM_GROUP_ID = #{termGroupId}
+          AND TERM_ID       = #{termId}
+          AND JNL_DATE      = #{jnlDate}
+          AND JNL_TIME      = #{jnlTime}
+          AND IMAGE_TYPE    = #{imageType}
+    </select>
+
+</mapper>

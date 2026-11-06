@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.nh.atms.ifex.mapper.FaultManagementMapper">
+
+    <resultMap id="faultMap" type="kr.co.nh.atms.ifex.entity.FaultManagement">
+        <id     property="faultSeq"     column="FAULT_SEQ"/>
+        <result property="globalId"     column="GLOBAL_ID"/>
+        <result property="termGroupId"  column="TERM_GROUP_ID"/>
+        <result property="termId"       column="TERM_ID"/>
+        <result property="faultType"    column="FAULT_TYPE"/>
+        <result property="errCd"        column="ERR_CD"/>
+        <result property="faultStatus"  column="FAULT_STATUS"/>
+        <result property="callDate"     column="CALL_DATE"/>
+        <result property="callTime"     column="CALL_TIME"/>
+        <result property="doneDate"     column="DONE_DATE"/>
+        <result property="doneTime"     column="DONE_TIME"/>
+        <result property="vendorCd"     column="VENDOR_CD"/>
+        <result property="faultDesc"    column="FAULT_DESC"/>
+        <result property="providerTypeCd" column="PROVIDER_TYPE_CD"/>
+        <result property="faultClassCd" column="FAULT_CLASS_CD"/>
+        <result property="errGroupCd"   column="ERR_GROUP_CD"/>
+        <result property="jnlDate"      column="JNL_DATE"/>
+        <result property="jnlTime"      column="JNL_TIME"/>
+        <result property="requestTypeCd" column="REQUEST_TYPE_CD"/>
+        <result property="manageNo"        column="MANAGE_NO"/>
+        <result property="requestReasonCd" column="REQUEST_REASON_CD"/>
+        <result property="customerWaitFlag" column="CUSTOMER_WAIT_FLAG"/>
+        <result property="securityOffDate" column="SECURITY_OFF_DATE"/>
+        <result property="securityOffTime" column="SECURITY_OFF_TIME"/>
+        <result property="dispatchStatusCd"   column="DISPATCH_STATUS_CD"/>
+        <result property="departureDate"      column="DEPARTURE_DATE"/>
+        <result property="departureTime"      column="DEPARTURE_TIME"/>
+        <result property="responsePerson"     column="RESPONSE_PERSON"/>
+        <result property="servicePerson"      column="SERVICE_PERSON"/>
+        <result property="servicePhoneNo"     column="SERVICE_PHONE_NO"/>
+        <result property="arrivalDate"        column="ARRIVAL_DATE"/>
+        <result property="arrivalTime"        column="ARRIVAL_TIME"/>
+        <result property="arrivalElapsedTime" column="ARRIVAL_ELAPSED_TIME"/>
+        <result property="finishedDate"       column="FINISHED_DATE"/>
+        <result property="finishedTime"       column="FINISHED_TIME"/>
+        <result property="repairFlag"         column="REPAIR_FLAG"/>
+        <result property="failureReasonCd"    column="FAILURE_REASON_CD"/>
+        <result property="repairComment"      column="REPAIR_COMMENT"/>
+        <result property="finishElapsedTime"  column="FINISH_ELAPSED_TIME"/>
+        <result property="regDt"        column="REG_DT"/>
+        <result property="updDt"        column="UPD_DT"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="kr.co.nh.atms.ifex.entity.FaultManagement">
+        <selectKey keyProperty="faultSeq" resultType="long" order="BEFORE">
+            SELECT SEQ_T_FAULT_MANAGEMENT.NEXTVAL FROM DUAL
+        </selectKey>
+        INSERT INTO T_FAULT_MANAGEMENT
+            (FAULT_SEQ, GLOBAL_ID, TERM_GROUP_ID, TERM_ID, FAULT_TYPE, ERR_CD,
+             FAULT_STATUS, CALL_DATE, CALL_TIME, DONE_DATE, DONE_TIME,
+             VENDOR_CD, FAULT_DESC, PROVIDER_TYPE_CD, FAULT_CLASS_CD, ERR_GROUP_CD,
+             JNL_DATE, JNL_TIME, REQUEST_TYPE_CD,
+             MANAGE_NO, REQUEST_REASON_CD, CUSTOMER_WAIT_FLAG,
+             SERVICE_PERSON, SERVICE_PHONE_NO, REG_DT, UPD_DT)
+        VALUES
+            (#{faultSeq}, #{globalId}, #{termGroupId}, #{termId}, #{faultType}, #{errCd},
+             #{faultStatus}, #{callDate}, #{callTime}, #{doneDate}, #{doneTime},
+             #{vendorCd}, #{faultDesc}, #{providerTypeCd}, #{faultClassCd}, #{errGroupCd},
+             #{jnlDate}, #{jnlTime}, #{requestTypeCd},
+             #{manageNo}, #{requestReasonCd}, #{customerWaitFlag},
+             #{servicePerson}, #{servicePhoneNo}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    </insert>
+
+    <select id="selectBySeq" resultMap="faultMap">
+        SELECT FAULT_SEQ, GLOBAL_ID, TERM_GROUP_ID, TERM_ID, FAULT_TYPE, ERR_CD,
+               FAULT_STATUS, CALL_DATE, CALL_TIME, DONE_DATE, DONE_TIME,
+               VENDOR_CD, FAULT_DESC, PROVIDER_TYPE_CD, FAULT_CLASS_CD, ERR_GROUP_CD,
+               JNL_DATE, JNL_TIME, REQUEST_TYPE_CD,
+               MANAGE_NO, REQUEST_REASON_CD, CUSTOMER_WAIT_FLAG, SECURITY_OFF_DATE, SECURITY_OFF_TIME,
+               DISPATCH_STATUS_CD, DEPARTURE_DATE, DEPARTURE_TIME, RESPONSE_PERSON,
+               SERVICE_PERSON, SERVICE_PHONE_NO, ARRIVAL_DATE, ARRIVAL_TIME, ARRIVAL_ELAPSED_TIME,
+               FINISHED_DATE, FINISHED_TIME, REPAIR_FLAG, FAILURE_REASON_CD, REPAIR_COMMENT,
+               FINISH_ELAPSED_TIME, REG_DT, UPD_DT
+          FROM T_FAULT_MANAGEMENT
+         WHERE FAULT_SEQ = #{faultSeq}
+    </select>
+
+    <update id="update" parameterType="kr.co.nh.atms.ifex.entity.FaultManagement">
+        UPDATE T_FAULT_MANAGEMENT
+           SET FAULT_STATUS = #{faultStatus},
+               ERR_CD       = #{errCd},
+               VENDOR_CD    = #{vendorCd},
+               FAULT_DESC   = #{faultDesc},
+               DONE_DATE    = #{doneDate},
+               DONE_TIME    = #{doneTime},
+               CUSTOMER_WAIT_FLAG = #{customerWaitFlag},
+               UPD_DT       = CURRENT_TIMESTAMP
+         WHERE FAULT_SEQ = #{faultSeq}
+    </update>
+
+    <!-- 송신 후 출동상태코드 갱신 (레거시 updateFaultManagement_at_01001120: 성공 1(출동요청) / 실패 0(미처리)) -->
+    <update id="updateDispatchStatus">
+        UPDATE T_FAULT_MANAGEMENT
+           SET DISPATCH_STATUS_CD = #{dispatchStatusCd},
+               UPD_DT             = CURRENT_TIMESTAMP
+         WHERE FAULT_SEQ = #{faultSeq}
+    </update>
+
+    <!-- 도착예정 수신 갱신 (EM 01001130) -->
+    <update id="updateDeparture" parameterType="kr.co.nh.atms.ifex.entity.FaultManagement">
+        UPDATE T_FAULT_MANAGEMENT
+           SET DISPATCH_STATUS_CD = #{dispatchStatusCd},
+               FAULT_STATUS       = #{faultStatus},
+               DEPARTURE_DATE     = #{departureDate},
+               DEPARTURE_TIME     = #{departureTime},
+               RESPONSE_PERSON    = #{responsePerson},
+               SERVICE_PERSON     = #{servicePerson},
+               SERVICE_PHONE_NO   = #{servicePhoneNo},
+               UPD_DT             = CURRENT_TIMESTAMP
+         WHERE FAULT_SEQ = #{faultSeq}
+    </update>
+
+    <!-- 도착통보 수신 갱신 (EM 01001140) -->
+    <update id="updateArrival" parameterType="kr.co.nh.atms.ifex.entity.FaultManagement">
+        UPDATE T_FAULT_MANAGEMENT
+           SET DISPATCH_STATUS_CD   = #{dispatchStatusCd},
+               FAULT_STATUS         = #{faultStatus},
+               ARRIVAL_DATE         = #{arrivalDate},
+               ARRIVAL_TIME         = #{arrivalTime},
+               ARRIVAL_ELAPSED_TIME = #{arrivalElapsedTime},
+               UPD_DT               = CURRENT_TIMESTAMP
+         WHERE FAULT_SEQ = #{faultSeq}
+    </update>
+
+    <!-- 조치결과 수신 갱신 (EM 01001150 / 01001190) -->
+    <update id="updateRepairResult" parameterType="kr.co.nh.atms.ifex.entity.FaultManagement">
+        UPDATE T_FAULT_MANAGEMENT
+           SET DISPATCH_STATUS_CD  = #{dispatchStatusCd},
+               FAULT_STATUS        = #{faultStatus},
+               FINISHED_DATE       = #{finishedDate},
+               FINISHED_TIME       = #{finishedTime},
+               REPAIR_FLAG         = #{repairFlag},
+               FAILURE_REASON_CD   = #{failureReasonCd},
+               REPAIR_COMMENT      = #{repairComment},
+               FINISH_ELAPSED_TIME = #{finishElapsedTime},
+               DONE_DATE           = #{finishedDate},
+               DONE_TIME           = #{finishedTime},
+               UPD_DT              = CURRENT_TIMESTAMP
+         WHERE FAULT_SEQ = #{faultSeq}
+    </update>
+
+</mapper>

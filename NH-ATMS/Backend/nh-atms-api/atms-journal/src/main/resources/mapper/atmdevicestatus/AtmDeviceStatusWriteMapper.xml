@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.nh.atms.journal.mapper.AtmDeviceStatusWriteMapper">
+
+    <!-- 12 개국 → 기기 디바이스정보 upsert (atmr upsert_T_ATMDEVICESTATUS) -->
+    <update id="upsert">
+        MERGE INTO T_ATM_DEVICE_STATUS t
+        USING (SELECT #{termGroupId,jdbcType=CHAR} AS TG,
+                      #{termId,jdbcType=VARCHAR}  AS TI FROM dual) s
+        ON (t.TERM_GROUP_ID = s.TG AND t.TERM_ID = s.TI)
+        WHEN MATCHED THEN UPDATE SET
+            t.DES_APPLY     = #{desApply,jdbcType=CHAR},
+            t.IC_APPLY      = #{icApply,jdbcType=CHAR},
+            t.EMV_APPLY     = #{emvApply,jdbcType=CHAR},
+            t.IR_APPLY      = #{irApply,jdbcType=CHAR},
+            t.RF_APPLY      = #{rfApply,jdbcType=CHAR},
+            t.FP_APPLY      = #{fpApply,jdbcType=CHAR},
+            t.OMAN_APPLY    = #{omanApply,jdbcType=CHAR},
+            t.ENCODE_APPLY  = #{encodeApply,jdbcType=CHAR},
+            t.ADD_INFO      = #{addInfo,jdbcType=VARCHAR},
+            t.BARCODE_APPLY = #{barcodeApply,jdbcType=CHAR},
+            t.CHK_STATUS    = #{chkStatus,jdbcType=CHAR},
+            t.PB_AUTO_TURN  = #{pbAutoTurn,jdbcType=CHAR},
+            t.HANDICAP_ATM  = #{handicapAtm,jdbcType=CHAR},
+            t.IP_ADDRESS    = #{ipAddress,jdbcType=CHAR},
+            t.OS_INFO       = #{osInfo,jdbcType=CHAR},
+            t.CPU_INFO      = #{cpuInfo,jdbcType=CHAR},
+            t.MEM_INFO      = #{memInfo,jdbcType=CHAR},
+            t.HDD1_TOT      = #{hdd1Tot,jdbcType=CHAR},
+            t.HDD1_USED     = #{hdd1Used,jdbcType=CHAR},
+            t.HDD2_TOT      = #{hdd2Tot,jdbcType=CHAR},
+            t.HDD2_USED     = #{hdd2Used,jdbcType=CHAR},
+            t.INSTALL_DATE  = #{installDate,jdbcType=VARCHAR}
+        WHEN NOT MATCHED THEN INSERT (
+            TERM_GROUP_ID, TERM_ID,
+            DES_APPLY, IC_APPLY, EMV_APPLY, IR_APPLY, RF_APPLY, FP_APPLY,
+            OMAN_APPLY, ENCODE_APPLY, ADD_INFO, BARCODE_APPLY, CHK_STATUS,
+            PB_AUTO_TURN, HANDICAP_ATM, IP_ADDRESS, OS_INFO, CPU_INFO, MEM_INFO,
+            HDD1_TOT, HDD1_USED, HDD2_TOT, HDD2_USED, INSTALL_DATE
+        ) VALUES (
+            #{termGroupId,jdbcType=CHAR}, #{termId,jdbcType=VARCHAR},
+            #{desApply,jdbcType=CHAR}, #{icApply,jdbcType=CHAR}, #{emvApply,jdbcType=CHAR},
+            #{irApply,jdbcType=CHAR}, #{rfApply,jdbcType=CHAR}, #{fpApply,jdbcType=CHAR},
+            #{omanApply,jdbcType=CHAR}, #{encodeApply,jdbcType=CHAR}, #{addInfo,jdbcType=VARCHAR},
+            #{barcodeApply,jdbcType=CHAR}, #{chkStatus,jdbcType=CHAR},
+            #{pbAutoTurn,jdbcType=CHAR}, #{handicapAtm,jdbcType=CHAR}, #{ipAddress,jdbcType=CHAR},
+            #{osInfo,jdbcType=CHAR}, #{cpuInfo,jdbcType=CHAR}, #{memInfo,jdbcType=CHAR},
+            #{hdd1Tot,jdbcType=CHAR}, #{hdd1Used,jdbcType=CHAR}, #{hdd2Tot,jdbcType=CHAR},
+            #{hdd2Used,jdbcType=CHAR}, #{installDate,jdbcType=VARCHAR}
+        )
+    </update>
+
+    <!-- 21/22 상태·장애 → 거래모드 상태정보 갱신 (atmr update_T_ATMDEVICESTATUS). row 없으면 0건. -->
+    <update id="updateTxMode">
+        UPDATE T_ATM_DEVICE_STATUS
+           SET MAN_O_STATUS  = #{manOStatus,jdbcType=CHAR},
+               MAN_I_STATUS  = #{manIStatus,jdbcType=CHAR},
+               OMAN_O_STATUS = #{omanOStatus,jdbcType=CHAR},
+               OMAN_I_STATUS = #{omanIStatus,jdbcType=CHAR},
+               CHK_O_STATUS  = #{chkOStatus,jdbcType=CHAR},
+               CHK_I_STATUS  = #{chkIStatus,jdbcType=CHAR},
+               PB_STATUS     = #{pbStatus,jdbcType=CHAR},
+               OCHUN_STATUS  = #{ochunStatus,jdbcType=CHAR}
+         WHERE TERM_GROUP_ID = #{termGroupId,jdbcType=CHAR}
+           AND TERM_ID       = #{termId,jdbcType=VARCHAR}
+    </update>
+
+</mapper>

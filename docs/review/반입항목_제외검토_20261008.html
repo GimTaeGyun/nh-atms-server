@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>반입 항목 제외 검토</title>
+<!--
+  PDF 생성 (A4, 머리글·바닥글 없음):
+  chrome --headless --no-pdf-header-footer --print-to-pdf=반입항목_제외검토_20261008.pdf 반입항목_제외검토_20261008.html
+-->
+<style>
+  :root {
+    --ink: #1c2430;
+    --muted: #5b6573;
+    --line: #c9d1dc;
+    --head: #e9eef5;
+    --accent: #1f4e8c;
+    --keep: #e7f3ea;
+    --hold: #fdf3e1;
+    --drop: #f7e9e9;
+  }
+  @page { size: A4; margin: 13mm 13mm 12mm 13mm; }
+  * { box-sizing: border-box; }
+  html, body { background: #fff; }
+  body {
+    margin: 0;
+    color: var(--ink);
+    font-family: "Noto Sans KR", "Malgun Gothic", "WenQuanYi Zen Hei", sans-serif;
+    font-size: 9.3pt;
+    line-height: 1.45;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .page { max-width: 184mm; margin: 0 auto; padding: 0 16px; }
+  @media print { .page { padding: 0; } }
+  header { border-bottom: 2px solid var(--accent); padding-bottom: 6px; margin-bottom: 10px; }
+  h1 { font-size: 16pt; margin: 0 0 3px; color: var(--accent); letter-spacing: -0.2px; }
+  .meta { color: var(--muted); font-size: 8.6pt; }
+  h2 { font-size: 11pt; margin: 13px 0 5px; color: var(--accent); }
+  h2 .tag { font-size: 8.4pt; color: var(--muted); font-weight: normal; margin-left: 6px; }
+  .summary { background: #f3f6fa; border: 1px solid var(--line); border-left: 4px solid var(--accent); padding: 7px 10px; }
+  .summary ol { margin: 0; padding-left: 18px; }
+  .summary li { margin: 2px 0; }
+  table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 8.7pt; }
+  th, td { border: 1px solid var(--line); padding: 3px 5px; vertical-align: top; text-align: left; overflow-wrap: anywhere; }
+  th { background: var(--head); font-weight: bold; }
+  tr { break-inside: avoid; }
+  td.k { font-weight: bold; }
+  .drop th { background: var(--drop); }
+  .hold th { background: var(--hold); }
+  .keep th { background: var(--keep); }
+  code { font-family: "DejaVu Sans Mono", Consolas, monospace; font-size: 8.2pt; background: #f1f3f6; padding: 0 2px; border-radius: 2px; }
+  ul.check { margin: 0; padding-left: 18px; }
+  ul.check li { margin: 1px 0; }
+  footer { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 4px; color: var(--muted); font-size: 7.8pt; }
+  .nobreak { break-inside: avoid; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header>
+  <h1>반입 항목 제외 검토 결과</h1>
+  <div class="meta">ATMS 개발서버(nbatmsltws01) · 작성일 2026-10-08<br>비교 대상: 내 검토(저장소 반입 문서 전체) + 동료 검토서 「01 프로그램 버전과 설치 요청」</div>
+</header>
+
+<div class="summary">
+  <ol>
+    <li>이번에 <b>새로 반입할 것은 Gitea 이미지, Jenkins 이미지(현업 제작), 배포킷</b> 세 가지와 체크섬 파일뿐이다.</li>
+    <li>동료 검토서 12개 항목 중 반입이 필요한 것은 <b>Jenkins 2.580.1 하나</b>이며 버전도 일치한다. 나머지는 이미 있거나, 다른 반입물에 포함되거나, 기존 은행 제품이다.</li>
+    <li>버전이 다른 항목(Node·React·Vite)은 <b>업체 소스에 고정된 버전을 유지</b>한다. 새 프로젝트가 아니라 기존 소스를 그대로 빌드하는 작업이며, 검토서도 "기존 서비스는 package-lock 기준"으로 정하고 있다.</li>
+    <li>임시 실행용 이미지 등은 <b>JEUS 의 Jakarta(Spring Boot 3) 지원 여부를 확인할 때까지 보류</b>한다.</li>
+  </ol>
+</div>
+
+<h2>1. 동료 검토서에서 빠질 항목 <span class="tag">12개 중 Jenkins 를 제외한 11개</span></h2>
+<table class="drop">
+  <colgroup><col style="width:17%"><col style="width:15%"><col style="width:16%"><col style="width:52%"></colgroup>
+  <tr><th>항목</th><th>검토서</th><th>실제 기준</th><th>빠지는 이유</th></tr>
+  <tr><td class="k">Node.js</td><td>LTS 24.21.0</td><td>22.23.x</td><td>업체 소스·빌드가 Node 22 기준(업체 Dockerfile <code>node:22</code>). Vite 7 의 요구(22.12 이상)를 충족하고 2027-04 까지 보안 지원. 24 로 바꾸면 업체 빌드 환경과 달라져 재검증 필요. Jenkins 이미지에 포함되고 PC 는 22.23.2 기반입</td></tr>
+  <tr><td class="k">Node 20</td><td>EOL, 선택 안 함</td><td>사용 안 함</td><td>검토서와 같은 의견</td></tr>
+  <tr><td class="k">npm</td><td>Node 동봉</td><td>Node 22 동봉</td><td>별도 반입 없음 (검토서와 같은 의견)</td></tr>
+  <tr><td class="k">React</td><td>19.3.0</td><td>19.2.4 (lock)</td><td>설치 프로그램이 아니라 앱 소스의 라이브러리. 기반입한 오프라인 npm 캐시로 <code>npm ci</code> 하면 package-lock 에 적힌 버전이 설치됨</td></tr>
+  <tr><td class="k">Vite</td><td>8.3 계열</td><td>7.3.1 (lock)</td><td>React 와 같은 이유. "최초 install 후 lock 생성"은 새 프로젝트 기준이고 우리는 lock 이 이미 있음. 8 은 메이저 업그레이드라 설정·플러그인 수정 필요</td></tr>
+  <tr><td class="k">Jenkins JVM</td><td>Java 21 / 25</td><td>Java 21</td><td>Jenkins 이미지(<code>2.580.1-lts-jdk21</code>)에 JDK 21 내장. 소스 빌드 기준(Java 21)·JEUS 실행 JDK(21)와 맞춤. 별도 에이전트 없이 Jenkins 본체 1대만 사용</td></tr>
+  <tr><td class="k">Python</td><td>3.12 계열 권장</td><td>별도 불필요</td><td>빌드에 쓰지 않음. 서버 스크립트는 unzip 이 없을 때만 python3 표준 기능으로 압축을 풂. RHEL 9 는 dnf 가 Python 으로 동작해 python3 가 기본 설치돼 있음</td></tr>
+  <tr><td class="k">Git CLI (서버)</td><td>2.x</td><td>이미지에 포함</td><td>서버 호스트에서는 git 을 직접 쓰지 않음. Jenkins·Gitea 이미지 안에 git 포함. 개발 PC 의 Git for Windows 만 확인 대상</td></tr>
+  <tr><td class="k">WebtoB · JEUS · Oracle</td><td>현장 버전 미제공</td><td>기설치 은행 제품</td><td>반입 대상이 아님. 버전·명세만 담당자에게 확인 (JEUS 는 servlet 규격 확인이 핵심, 5장). JDBC 드라이버는 앱 WAR 에 포함</td></tr>
+</table>
+
+<h2>2. 내 검토(저장소 문서)에서 빠질 항목</h2>
+<table class="drop">
+  <colgroup><col style="width:27%"><col style="width:12%"><col style="width:61%"></colgroup>
+  <tr><th>항목</th><th>상태</th><th>빠지는 이유</th></tr>
+  <tr><td class="k">Docker 엔진 (<code>docker-29.8.0.tgz</code> 의 dockerd·containerd 등)</td><td>기반입</td><td>설치에 root 가 필요하고 데몬이 상시 root 로 동작 → 1일 root 권한이 끝나면 관리 불가. 서버에 기설치된 Podman(일반 계정 실행)을 사용</td></tr>
+  <tr><td class="k">Docker Desktop 설치 파일</td><td>기반입</td><td>Windows PC 전용. 서버와 무관</td></tr>
+  <tr><td class="k"><code>eclipse-temurin:21-jdk</code> 이미지</td><td>업체 구성</td><td>백엔드 빌드는 Jenkins 이미지 안의 JDK 21 로 수행</td></tr>
+  <tr><td class="k"><code>node:22-alpine</code> 이미지</td><td>업체 구성</td><td>Node 22 가 Jenkins 이미지에 포함</td></tr>
+  <tr><td class="k">Kafka · Elasticsearch · Kibana 이미지</td><td>업체 구성</td><td>저널 스트리밍 기능은 기본 꺼짐이고 업체 시연 환경 전용 (약 2GB 절감)</td></tr>
+  <tr><td class="k">Oracle DB 이미지</td><td>—</td><td>은행 DB(<code>NBATMSTP</code>) 사용</td></tr>
+  <tr><td class="k">업체 Jenkins 구성 (<code>Jenkins_v1.1.zip</code>, 업체 플러그인 목록)</td><td>기반입</td><td>GitLab·GitHub·Slack·인터넷 연결 전제. 외부 연동 플러그인(GitLab, GitHub, Slack, Blue Ocean 등)을 빼고 사내 Gitea 연동 기준 16개로 재구성한 은행용 이미지로 대체</td></tr>
+  <tr><td class="k">pnpm 오프라인 패키지</td><td>기반입</td><td>프로젝트는 npm(<code>package-lock.json</code>)을 사용하며 pnpm 은 쓰지 않음</td></tr>
+</table>
+
+<div class="nobreak">
+<h2>3. 보류 항목 <span class="tag">JEUS 의 Jakarta 지원 확인 후 결정</span></h2>
+<table class="hold">
+  <colgroup><col style="width:27%"><col style="width:12%"><col style="width:61%"></colgroup>
+  <tr><th>항목</th><th>상태</th><th>필요해지는 경우</th></tr>
+  <tr><td class="k"><code>temurin-21-jre</code> 이미지</td><td>미반입</td><td>JEUS 가 Spring Boot 3(Jakarta)를 지원하지 않아 atms-web 을 컨테이너로 띄우는 대안을 쓸 때</td></tr>
+  <tr><td class="k"><code>nginx</code> 이미지</td><td>미반입</td><td>WebtoB 배포 전에 화면을 임시로 제공할 때</td></tr>
+  <tr><td class="k"><code>docker-compose</code> 실행 파일</td><td>미반입</td><td>서버에서 여러 모듈을 컨테이너로 함께 띄울 때 (Jenkins 안에서 쓰는 compose 는 이미지에 이미 포함)</td></tr>
+  <tr><td class="k">Linux JDK 21.0.12, docker CLI</td><td>기반입</td><td>컨테이너 없이 직접 실행하거나 위 compose 를 쓰는 대안 경로에서만 사용 (추가 반입 없음)</td></tr>
+</table>
+</div>
+
+<div class="nobreak">
+<h2>4. 최종 반입 목록</h2>
+<table class="keep">
+  <colgroup><col style="width:16%"><col style="width:33%"><col style="width:51%"></colgroup>
+  <tr><th>구분</th><th>항목</th><th>비고</th></tr>
+  <tr><td>신규</td><td class="k"><code>gitea-rootless.tar</code></td><td>사내 Git 서버 (HTTP 3000)</td></tr>
+  <tr><td>신규 (현업 제작)</td><td class="k"><code>nh-atms-jenkins-bank.tar</code></td><td>Jenkins 2.580.1 LTS + 플러그인 16개 + Node 22.23.3 · Docker CLI 29.8.2 · Compose 5.6.0 (버전표 별도 전달)</td></tr>
+  <tr><td>신규</td><td class="k">배포킷 <code>ATMS-Server.zip</code></td><td>스크립트·설정·문서 (NH-ATMS 소스 제외)</td></tr>
+  <tr><td>신규</td><td class="k"><code>SHA256SUMS.txt</code>, <code>versions.txt</code></td><td>무결성 확인·버전 기록</td></tr>
+  <tr><td>기반입 (계속 사용)</td><td class="k"><code>offline-seed</code> (Gradle·npm 캐시)</td><td>Jenkins·PC 오프라인 빌드용</td></tr>
+  <tr><td>기반입 (계속 사용)</td><td class="k">JDK 21.0.12, Node 22.23.2</td><td>PC 빌드용</td></tr>
+</table>
+</div>
+
+<div class="nobreak">
+<h2>5. 담당자 확인 필요</h2>
+<ul class="check">
+  <li><b>JEUS</b>: 제품 버전·Fix, <b>servlet 규격(Jakarta 지원 여부)</b>, 실행 JDK → 3장 보류 항목의 반입 여부가 이 결과로 정해짐</li>
+  <li><b>WebtoB</b> 버전·Fix, <b>Oracle</b> 버전 (각 담당자)</li>
+  <li><b>개발 PC</b>: Git for Windows 설치 여부, PC 빌드용 Temurin 21 JDK 보유 여부 (없으면 Windows 용 Temurin 21 반입)</li>
+</ul>
+</div>
+
+<footer>근거: 저장소 docs/REQUIRED_FILES.md, SERVER_SETUP_GUIDE.md, PROTOTYPE_QUICKSTART.md, GITEA_SETUP_GUIDE.md, JEUS_WEBTOB_DEPLOY_GUIDE.md · NH-ATMS 소스(package-lock.json, build.gradle, Dockerfile) · Jenkins·플러그인 버전은 2026-10-08 Jenkins 업데이트 센터 조회값</footer>
+
+</div>
+</body>
+</html>

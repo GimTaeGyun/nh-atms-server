@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.nh.atms.journal.mapper.JournalMapper">
+
+    <insert id="insert" parameterType="kr.co.nh.atms.journal.entity.Journal">
+        INSERT /*+ IGNORE_ROW_ON_DUPKEY_INDEX(T_JOURNAL, PK_T_JOURNAL) */ INTO T_JOURNAL (
+            TERM_GROUP_ID, TERM_ID, JNL_DATE, JNL_TIME, AGENT_TYPE,
+            SEQ_NO, JNL_TYPE_CD, JNL_WRITE_TYPE_CD, RECV_DATE, RECV_TIME
+        ) VALUES (
+            #{termGroupId,jdbcType=CHAR},  #{termId,jdbcType=VARCHAR},
+            #{jnlDate,jdbcType=CHAR},      #{jnlTime,jdbcType=CHAR},
+            #{agentType,jdbcType=CHAR},
+            #{seqNo,jdbcType=CHAR},        #{jnlTypeCd,jdbcType=CHAR},
+            #{jnlWriteTypeCd,jdbcType=CHAR},
+            #{recvDate,jdbcType=CHAR},     #{recvTime,jdbcType=CHAR}
+        )
+    </insert>
+
+</mapper>

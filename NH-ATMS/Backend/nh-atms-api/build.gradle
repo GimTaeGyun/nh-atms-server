@@ -1,0 +1,92 @@
+// =====================================================================
+// NH-ATMS Multi-Module Root build.gradle
+// - 6 services: web / journal(atmr) / batch(atmb) / file(atmf)
+//               if-internal(atmi) / if-external(atme)
+// - 1 library: common (security/jwt/sso/response/exception/logging)
+// =====================================================================
+
+plugins {
+    id 'org.springframework.boot' version '3.5.0' apply false
+    id 'io.spring.dependency-management' version '1.1.7' apply false
+}
+
+allprojects {
+    group = 'kr.co.nh'
+    version = '0.0.1-SNAPSHOT'
+
+    repositories {
+        mavenCentral()
+    }
+}
+
+subprojects {
+    apply plugin: 'java'
+    apply plugin: 'io.spring.dependency-management'
+
+    java {
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(21)
+            vendor = JvmVendorSpec.ADOPTIUM
+        }
+    }
+
+    dependencyManagement {
+        imports {
+            mavenBom org.springframework.boot.gradle.plugin.SpringBootPlugin.BOM_COORDINATES
+        }
+    }
+
+    configurations {
+        compileOnly {
+            extendsFrom annotationProcessor
+        }
+    }
+
+    dependencies {
+        // Lombok (모든 모듈 공통)
+        compileOnly 'org.projectlombok:lombok'
+        annotationProcessor 'org.projectlombok:lombok'
+
+        // Test
+        testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    }
+
+    tasks.named('test') {
+        // 실제 DB 에 접속하는 테스트(@Tag("db"))는 기본 제외 — 로컬 계정 잠김 방지. 돌리려면 -PdbTest (2026-11-05)
+        useJUnitPlatform {
+            if (!project.hasProperty('dbTest')) {
+                excludeTags 'db'
+            }
+        }
+    }
+
+    tasks.withType(JavaCompile).configureEach {
+        options.encoding = 'UTF-8'
+    }
+
+    // ── JEUS(외부 WAS) 배포용 WAR ───────────────────────────────────────
+    // 사용: ./gradlew bootWar -Pjeus            → <모듈>/build/libs/<모듈>-<버전>.war (Spring Boot 6개 모듈 전부)
+    //       ./gradlew :atms-web:bootWar -Pjeus  → 한 모듈만
+    // -Pjeus 가 없으면 기존과 동일 (bootJar/bootRun, 내장 톰캣) → 로컬 개발·컨테이너 빌드 영향 없음
+    //  - providedRuntime : 내장 톰캣을 WEB-INF/lib 에서 제외 (JEUS 가 서블릿 컨테이너 역할)
+    //  - WEB-INF/web.xml : jeus/web.xml 템플릿. spring.profiles.active 를 지정 (기본 jeus, -PjeusProfile=<이름> 으로 변경)
+    pluginManager.withPlugin('org.springframework.boot') {
+        if (project.hasProperty('jeus')) {
+            apply plugin: 'war'
+            dependencies {
+                providedRuntime 'org.springframework.boot:spring-boot-starter-tomcat'
+            }
+            def jeusProfile = project.findProperty('jeusProfile') ?: 'jeus'
+            // 로컬 전용 설정(application-local.yml: 로컬 DB·JWT 값)은 WAR 에 넣지 않는다 (2026-11-02)
+            tasks.named('processResources') {
+                exclude 'application-local.yml'
+            }
+            tasks.named('bootWar') {
+                from(rootProject.file('jeus/web.xml')) {
+                    into 'WEB-INF'
+                    expand(profile: jeusProfile, moduleName: project.name)
+                }
+            }
+        }
+    }
+}

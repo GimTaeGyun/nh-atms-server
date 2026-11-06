@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.nh.atms.web.transactionjournal.mapper.TransactionJournalMapper">
+
+    <resultMap id="rm" type="kr.co.nh.atms.web.transactionjournal.entity.TransactionJournal" autoMapping="true"/>
+
+    <sql id="cols">
+        TERM_GROUP_ID, TERM_ID, JNL_DATE, JNL_TIME,
+        TR_NO, TR_TYPE, TR_FROM_ACCOUNT, TR_TO_ACCOUNT,
+        BANK_CD, ACCOUNT_NO, TO_BANK_CD, TO_ACCOUNT_NO,
+        TR_HOST_DATE, TR_HOST_TIME, TR_HOST_NO, TR_HOST_AUDIT_NO,
+        HOST_NET_ID, HOST_SETTLE_DATE, DEPOSIT_NO,
+        SURCHARGE, REQUEST_AMOUNT, DISPENSE_AMOUNT, REMAIN_AMOUNT, AVAIL_AMOUNT,
+        HOST_CASH_AMOUNT, HOST_CHECK_AMOUNT,
+        PROC_COUNT, TR_RESULT, ERR_CD1, ERR_CD2, ERR_CD3,
+        CARD_DATA, NON_CASH_VALUE, NON_CASH_TYPE, TR_MEDIA_CD,
+        MESSAGE, TOTAL_TYPE_CD, TRANSFER_NAME
+    </sql>
+
+    <sql id="where">
+        <where>
+            <if test="termGroupId != null and termGroupId != ''">
+                AND TERM_GROUP_ID = #{termGroupId}
+            </if>
+            <if test="termId != null and termId != ''">
+                AND TERM_ID = #{termId}
+            </if>
+            <if test="trTypes != null and trTypes.size() > 0">
+                AND TR_TYPE IN
+                <foreach collection="trTypes" item="t" open="(" separator="," close=")">
+                    #{t}
+                </foreach>
+            </if>
+            <if test="(trTypes == null or trTypes.size() == 0) and trType != null and trType != ''">
+                AND TR_TYPE = #{trType}
+            </if>
+            <if test="accountNo != null and accountNo != ''">
+                AND ACCOUNT_NO = #{accountNo}
+            </if>
+            <if test="cardData != null and cardData != ''">
+                AND CARD_DATA = #{cardData}
+            </if>
+            <if test="trResult != null and trResult != ''">
+                AND TR_RESULT = #{trResult}
+            </if>
+            <if test="fromDate != null and fromDate != ''">
+                AND JNL_DATE &gt;= #{fromDate}
+            </if>
+            <if test="toDate != null and toDate != ''">
+                AND JNL_DATE &lt;= #{toDate}
+            </if>
+            <if test="errorOnly != null and errorOnly == true">
+                AND TR_RESULT IS NOT NULL AND TR_RESULT &lt;&gt; '0000'
+            </if>
+        </where>
+    </sql>
+
+    <select id="selectList" resultMap="rm">
+        SELECT <include refid="cols"/>
+          FROM T_TRANSACTION_JOURNAL
+        <include refid="where"/>
+        ORDER BY JNL_DATE DESC, JNL_TIME DESC
+        OFFSET #{offset} ROWS FETCH NEXT #{limit} ROWS ONLY
+    </select>
+
+    <select id="countList" resultType="long">
+        SELECT COUNT(*) FROM T_TRANSACTION_JOURNAL
+        <include refid="where"/>
+    </select>
+
+    <select id="selectOne" resultMap="rm">
+        SELECT <include refid="cols"/>
+          FROM T_TRANSACTION_JOURNAL
+         WHERE TERM_GROUP_ID = #{termGroupId}
+           AND TERM_ID       = #{termId}
+           AND JNL_DATE      = #{jnlDate}
+           AND JNL_TIME      = #{jnlTime}
+    </select>
+
+</mapper>

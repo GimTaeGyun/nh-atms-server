@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.nh.atms.batch.mapper.Batday98Mapper">
+
+    <!-- =================================================================
+         batday98 : 테이블 데이터 정리 - AS-IS atmb sqlmap/batday98.xml 이식
+         기준일 = TRUNC(SYSDATE) - T_TABLE_MANAGEMENT.KEEP_PERIOD (KEEP_CYCLE='1', DELETE_YN='1')
+         T_TABLE_MANAGEMENT 에 해당 테이블 행이 없거나 비활성이면 서브쿼리가
+         NULL 을 반환하여 0건 삭제 (AS-IS 동일 동작).
+         AS-IS 대상 중 TO-BE 미존재 테이블(t_remoteinterface, t_journalfootnote,
+         t_atms_crud)은 제외 - MIGRATION-NOTES.md 참조.
+         ================================================================= -->
+
+    <sql id="cutoff">
+        SELECT TO_CHAR(TRUNC(SYSDATE) - KEEP_PERIOD, 'YYYYMMDD')
+          FROM T_TABLE_MANAGEMENT
+         WHERE KEEP_CYCLE = '1'
+           AND DELETE_YN  = '1'
+    </sql>
+
+    <select id="selectCleanupTargets" resultType="map">
+        SELECT TABLE_NAME                                          AS "tableName"
+             , TO_CHAR(TRUNC(SYSDATE) - KEEP_PERIOD, 'YYYYMMDD')   AS "delDate"
+          FROM T_TABLE_MANAGEMENT
+         WHERE KEEP_CYCLE = '1'
+           AND DELETE_YN  = '1'
+         ORDER BY TABLE_NAME
+    </select>
+
+    <delete id="deleteBatchHistory">
+        DELETE FROM T_BATCH_HISTORY
+         WHERE START_DATE &lt;= (<include refid="cutoff"/> AND TABLE_NAME = 'T_BATCH_HISTORY')
+    </delete>
+
+    <delete id="deleteAtmMonitor">
+        DELETE FROM T_ATM_MONITOR
+         WHERE JNL_DATE &lt;= (<include refid="cutoff"/> AND TABLE_NAME = 'T_ATM_MONITOR')
+    </delete>
+
+    <delete id="deleteGwInterface">
+        DELETE FROM T_GW_INTERFACE
+         WHERE SEND_DATE &lt;= (<include refid="cutoff"/> AND TABLE_NAME = 'T_GW_INTERFACE')
+    </delete>
+
+    <delete id="deleteNetRecvData">
+        DELETE FROM T_NET_RECV_DATA
+         WHERE RECV_DATE &lt;= (<include refid="cutoff"/> AND TABLE_NAME = 'T_NET_RECV_DATA')
+    </delete>
+
+    <delete id="deleteNetSendData">
+        DELETE FROM T_NET_SEND_DATA
+         WHERE SEND_DATE &lt;= (<include refid="cutoff"/> AND TABLE_NAME = 'T_NET_SEND_DATA')
+    </delete>
+
+    <delete id="deleteJournal">
+        DELETE FROM T_JOURNAL
+         WHERE JNL_DATE &lt;= (<include refid="cutoff"/> AND TABLE_NAME = 'T_JOURNAL')
+    </delete>
+
+    <delete id="deleteJournalData">
+        DELETE FROM T_JOURNAL_DATA
+         WHERE JNL_DATE &lt;= (<include refid="cutoff"/> AND TABLE_NAME = 'T_JOURNAL_DATA')
+    </delete>
+
+    <delete id="deleteJournalError">
+        DELETE FROM T_JOURNAL_ERROR
+         WHERE JNL_DATE &lt;= (<include refid="cutoff"/> AND TABLE_NAME = 'T_JOURNAL_ERROR')
+    </delete>
+
+    <delete id="deleteJournalImage">
+        DELETE FROM T_JOURNAL_IMAGE
+         WHERE JNL_DATE &lt;= (<include refid="cutoff"/> AND TABLE_NAME = 'T_JOURNAL_IMAGE')
+    </delete>
+
+    <delete id="deleteTransactionJournal">
+        DELETE FROM T_TRANSACTION_JOURNAL
+         WHERE JNL_DATE &lt;= (<include refid="cutoff"/> AND TABLE_NAME = 'T_TRANSACTION_JOURNAL')
+    </delete>
+
+    <delete id="deleteOperationJournal">
+        DELETE FROM T_OPERATION_JOURNAL
+         WHERE JNL_DATE &lt;= (<include refid="cutoff"/> AND TABLE_NAME = 'T_OPERATION_JOURNAL')
+    </delete>
+
+</mapper>

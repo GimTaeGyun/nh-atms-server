@@ -1,0 +1,130 @@
+/*
+IIF (Internal Interface) : 대내 인터페이스
+- charset : cp949(ms949), euc-kr
+*/
+{
+	 "#charset#" : "euc-kr"
+
+	,"#iif#" : {
+		 "#head#" : {
+			 "#desc#" : "대내 인터페이스 표준전문 헤더"
+			,"#type#" : "fixed"
+			,"#field#": [
+				 { "#key#": "stnd_msg_len"     , "#len#":   8, "#dt#": 1         } // 표준전문길이         | stnd_msg_len 제외한 길이
+				,{ "#key#": "global_id"        , "#len#":  32                    } // 글로벌ID             | 전문생성일(6;yyMMdd)+시분초(6)+요청시스템(8)+일련번호(10)+진행번호(2;00) 일련번호는 spm의 getSequenceNoByUPCH_netrecv_reg 참고
+				,{ "#key#": "tr_cd"            , "#len#":  13                    } // 거래코드             |
+				,{ "#key#": "resp_tr_cd"       , "#len#":  13                    } // 응답거래코드         |
+				,{ "#key#": "long_msg_type"    , "#len#":   1                    } // 출력전문유형         |
+				,{ "#key#": "send_rspn_type"   , "#len#":   1                    } // 요청/응답구분        |
+				,{ "#key#": "msg_cret_dtim"    , "#len#":  17                    } // 전문생성일시         |
+				,{ "#key#": "yeonsumd_yn"      , "#len#":   1                    } // 연수모드여부         |
+				,{ "#key#": "sync_type"        , "#len#":   1                    } // SYNC구분코드         |
+				,{ "#key#": "async_resp_yn"    , "#len#":   1                    } // ASYNC응답여부        |
+				,{ "#key#": "xa_begin_flag"    , "#len#":   1                    } // XA거래구분코드       |
+				,{ "#key#": "eai_svc_cd"       , "#len#":  12,"#body-key#": true } // EAI서비스코드        |
+				,{ "#key#": "trmn_lock_yn"     , "#len#":   1                    } // 단말잠금여부         |
+				,{ "#key#": "send_intf_gb"     , "#len#":   1                    } // 송신인터페이스구분   |
+				,{ "#key#": "send_node_cntn"   , "#len#":   5                    } // 송신노드내용         |
+				,{ "#key#": "chl_knd"          , "#len#":   2                    } // 채널유형             |
+				,{ "#key#": "msg_knd"          , "#len#":   1                    } // 전문종류             |
+				,{ "#key#": "msg_send_gbcd"    , "#len#":   1                    } // 전문전송구분코드     |
+				,{ "#key#": "al_appl_code"     , "#len#":   4                    } // 애니링크업무코드     |
+				,{ "#key#": "al_kind_code"     , "#len#":   8                    } // 애니링크종별코드     |
+				,{ "#key#": "al_inst_code"     , "#len#":   4                    } // 애니링크기관코드     |
+				,{ "#key#": "msg_flag"         , "#len#":   1                    } // 전문결과코드         |
+				,{ "#key#": "err_src"          , "#len#":   3                    } // 장애시스템명         |
+				,{ "#key#": "err_type"         , "#len#":   2                    } // 장애종류             |
+				,{ "#key#": "msg_cd"           , "#len#":   9                    } // 메세지코드           |
+				,{ "#key#": "clnt_ip_no"       , "#len#":  12                    } // 클라이언트IP번호     |
+				,{ "#key#": "client_mac"       , "#len#":  12                    } // 클라이언트MAC        |
+				,{ "#key#": "scm_id"           , "#len#":  10                    } // 화면ID               |
+				,{ "#key#": "clos_gb"          , "#len#":   1                    } // 마감구분             |
+				,{ "#key#": "msg_medu_gbcd"    , "#len#":   8                    } // 전문매체구분코드     |
+				,{ "#key#": "tr_gmgo_conv_yn"  , "#len#":   1                    } // 거래금고전환여부     |
+				,{ "#key#": "tr_gmgocd"        , "#len#":   4                    } // 거래금고코드         |
+				,{ "#key#": "tr_gmgo_hqbrcd"   , "#len#":   3                    } // 거래금고본지점코드   |
+				,{ "#key#": "tr_gmgo_tmno"     , "#len#":   3                    } // 거래금고단말번호     |
+				,{ "#key#": "telrno"           , "#len#":   3                    } // 텔레번호             |
+				,{ "#key#": "empno"            , "#len#":   7                    } // 사원번호             |
+				,{ "#key#": "aprv_empno_1"     , "#len#":   7                    } // 승인사원번호1        |
+				,{ "#key#": "aprv_empno_2"     , "#len#":   7                    } // 승인사원번호2        |
+				,{ "#key#": "busi_yn"          , "#len#":   1                    } // 영업유무             |
+				,{ "#key#": "sys_date"         , "#len#":   8                    } // 시스템일자           |
+				,{ "#key#": "orgnl_global_id"  , "#len#":  32                    } // 원GLOBAL_ID          |
+				,{ "#key#": "apm_msg_send_time", "#len#":   9                    } // APM전문전송시간      |
+				,{ "#key#": "apm_msg_rcv_tm"   , "#len#":   9                    } // APM전문수신시간      |
+				,{ "#key#": "apm_log_flag"     , "#len#":   1                    } // APM로깅FLAG          |
+				,{ "#key#": "filler"           , "#len#":  19                    } // 여유공간             |
+				
+				//#data-head# : 데이터부는 가변이지만 현재 업무에서는 고정으로 사용
+				,{ "#key#": "data_type  "      , "#len#":   2                    } // 데이터종류
+				,{ "#key#": "data_length"      , "#len#":   8, "#dt#": 1         } // 데이터전문길이 : #data-head#(35-8) + #body#  
+				,{ "#key#": "txn_code   "      , "#len#":  13                    } // 거래코드
+				,{ "#key#": "src_id     "      , "#len#":  10                    } // 화면ID
+				,{ "#key#": "form_cnt   "      , "#len#":   2, "#dt#": 1         } // Form반복회수
+			]
+		}
+
+		,"#body#" : {
+			 "000000000000" : {}
+
+			,"ATMONST10100-S" : {
+				 "#desc#" : "시재조회 요청"
+				,"#type#" : "fixed"
+				,"#field#": [
+					  { "#key#":"gmgo_cd", "#len#":  4 } // 금고코드
+					, { "#key#":"occur"  , "#len#":  2 } // 반복횟수
+					, { "#key#":"telr_no", "#len#": 90 } // 텔러번호 (3*30)
+				]
+			}
+
+			,"ATMONST10100" : {
+				 "#desc#" : "시재조회 응답"
+				,"#type#" : "fixed"
+				,"#field#": [
+					  { "#key#":"gmgo_cd", "#len#":    4 } // 금고코드
+					, { "#key#":"occur"  , "#len#":    2 } // 반복횟수
+					, { "#key#":"s_amt"  , "#len#": 1710 } // 금고시재
+				]
+			}
+
+			,"SMSONSS10200" : {
+				 "#desc#" : "ATMS-UMS SMS 온라인"
+				,"#type#" : "fixed"
+				,"#field#": [
+					  { "#key#":"snd_hist_id"   , "#len#":  40 } // 발송이력식별자 : ONE글로벌ID(32)+일련번호(8)                                                  | *필수항목 One글로벌ID(32) + 00000000
+					, { "#key#":"trans_id"      , "#len#":  10 } // 거래식별자     : UMSSTD0001                                                                   | *필수항목 UMSSTD0001
+					, { "#key#":"msg_type"      , "#len#":   2 } // 메시지구분     : SM or LM                                                                     | *필수항목 SM
+					, { "#key#":"ums_biz_id"    , "#len#":  10 } // UMS업무식별자  : BKATM2601R or BKATM2602R                                                     | *필수항목 T_SMSSENDDATA에서 SEND_TYPE = R 자동, 0 수동
+					, { "#key#":"sub_biz_type"  , "#len#":  10 } // 업무내구분     : 해당 업무 내부에서 거래를 분류하기 위한 예약 필드                            | space
+					, { "#key#":"trans_dt"      , "#len#":  14 } // 거래일시       : 전송시각, 20110215121212                                                     | *필수항목 예시: 20250414164010
+					, { "#key#":"req_dt"        , "#len#":  14 } // 요청일시       : 거래일시와 동일하게, 20110215121212                                          | *필수항목
+					, { "#key#":"resrv_flag"    , "#len#":   1 } // 예약플래그     : N                                                                            | *필수항목
+					, { "#key#":"resrv_dt"      , "#len#":  14 } // 예약일시       :                                                                              | space
+					, { "#key#":"ums_id"        , "#len#":  16 } // UMS아이디      :                                                                              | space
+					, { "#key#":"ums_join_chnl" , "#len#":   3 } // UMS가입채널    : INB:인터넷뱅킹, CBS: 코어/창구,TEL:텔레뱅킹                                  | space
+					, { "#key#":"cust_type"     , "#len#":   1 } // 개인기업구분   : 1:개인, 2:법인사업자, 3:개인사업자, 4:법인등록번호, 5:BIC코드, 7:외국인      | space
+					, { "#key#":"cust_class"    , "#len#":   2 } // 고객구분       : 00:0, 01:A, 02:AA, 03:AAA, 13:B                                              | space
+					, { "#key#":"cust_id"       , "#len#":   9 } // 고객번호       : 차세대 고객번호                                                              | space
+					, { "#key#":"real_name_no"  , "#len#":  13 } // 실명번호       : 주민번호,사업자번호, ATMS 경우 : nullspace                                   | space
+					, { "#key#":"cust_name"     , "#len#":  60 } // 고객명         :                                                                              | space
+					, { "#key#":"acct_mgmt_br"  , "#len#":   5 } // 계좌관리부점   : 16번 계좌번호 또는 17번 카드번호에 대한 관리부점코드, ATMS 경우 : nullspace  | space
+					, { "#key#":"acct_no"       , "#len#":  13 } // 계좌번호       : 신계좌번호                                                                   | space
+					, { "#key#":"real_acct_type", "#len#":   2 } // 실계좌구분     : 0.확인불가 1. 구계좌번호, 2. 신규계좌번호, 3. 맞춤계좌번호                   | space
+					, { "#key#":"real_acct_no"  , "#len#":  13 } // 실계좌번호     : 해당거래계좌번호                                                             | space
+					, { "#key#":"card_no"       , "#len#":  16 } // 카드번호       :                                                                              | space
+					, { "#key#":"rcpt_addr_no"  , "#len#":  60 } // 수신번호주소   : 메시지구분에 따라, 휴대폰번호, 이메일 등이 기록, *ATMS 경우 : 휴대폰번호     | *필수항목 *ATMS 경우 : 휴대폰번호
+					, { "#key#":"snd_addr_no"   , "#len#":  60 } // 발신번호주소   : 메시지구분에 따라, 휴대폰번호, 이메일 등이 기록, *ATMS 경우 : 금고 전화번호  | *필수항목 *ATMS 경우 : 금고 전화번호
+					, { "#key#":"snd_emp_no"    , "#len#":  10 } // 발송직원번호   : 본 발송의 책임자, *ATMS 경우 : 자동통보설정 및 수동통보 사원번호             | *필수항목 *ATMS 경우 : 자동통보설정 및 수동통보 사원번호
+					, { "#key#":"snd_br_cd"     , "#len#":   5 } // 발송부점코드   : 본 발송의 책임부서 혹은 금고, *ATMS 경우 : 금고코드                          | *필수항목 *ATMS 경우 : 금고코드
+					, { "#key#":"callback_url"  , "#len#": 120 } // 콜백URL        :                                                                              | space
+					, { "#key#":"temp_fil_1"    , "#len#": 157 } // 예비           : 결과 수신시 다시 feedback할 내용들은 별도 '연동참조'내용 참고                | space
+					, { "#key#":"temp_fil_2"    , "#len#": 130 } // 예비           :                                                                              | space
+					, { "#key#":"sms_subject"   , "#len#": 120 } // 단문내용제목   : SMS본문,기타의 경우 제목 (80byte 만 사용 권고)                               |
+					, { "#key#":"lms_subject"   , "#len#": 11  } // 장문내용제목   : 이메일,팩스 사용시에만 사용, 11바이트 이상 가변 길이임, 별도 '장문내용' 참고 | space
+				]
+			}
+		}
+	}
+}
+

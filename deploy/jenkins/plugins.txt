@@ -1,0 +1,18 @@
+# 은행 개발서버(폐쇄망)용 Jenkins 플러그인 — Jenkins 2.580.1 LTS 기준 버전 고정 (2026-10-08 업데이트 센터 조회)
+# 의존 플러그인(71개)은 jenkins-plugin-cli 가 함께 설치. 표: docs/REQUIRED_FILES.md 2-3장
+workflow-aggregator:608.v67378e9d3db_1
+pipeline-stage-view:2.41
+git:5.10.1
+gitea:283.v14b_179495971
+credentials:1511.v2e3cb_0008ef0
+credentials-binding:728.v902a_273b_8947
+plain-credentials:199.v9f8e1f741799
+ssh-agent:433.v9e73d67c3f74
+docker-workflow:653.v2f2c08eff0ec
+gradle:2.20.1253.vc116f0763a_eb_
+junit:1434.vde2d24df0c4c
+timestamper:1.30
+ansicolor:542.v03d235fee02d
+ws-cleanup:0.49
+build-timeout:1.41
+configuration-as-code:2133.ve570217cdb_cd

@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.nh.atms.web.serviceprovider.mapper.ServiceProviderMapper">
+
+    <resultMap id="ServiceProviderResultMap" type="kr.co.nh.atms.web.serviceprovider.entity.ServiceProvider" autoMapping="true"/>
+
+    <sql id="cols">
+        PROVIDER_CD, KNBANK_FLAG, PROVIDER_NAME, PROVIDER_TYPE_CD,
+        PERSON, PHONE_NO, FAX_NO, EMAIL, ZIP_CD, ADDRESS,
+        SEND_TYPE, FAULT_SEND_TYPE, USE_YN, WOORI_FLAG
+    </sql>
+
+    <sql id="searchWhere">
+        <where>
+            <if test="providerCd != null and providerCd != ''">
+                AND PROVIDER_CD LIKE '%' || #{providerCd} || '%'
+            </if>
+            <if test="providerName != null and providerName != ''">
+                AND PROVIDER_NAME LIKE '%' || #{providerName} || '%'
+            </if>
+            <if test="providerTypeCd != null and providerTypeCd != ''">
+                AND PROVIDER_TYPE_CD = #{providerTypeCd}
+            </if>
+            <if test="useYn != null and useYn != ''">
+                AND USE_YN = #{useYn}
+            </if>
+            <!-- DB 값: 1=사용, 0=미사용 / knbankFlag, wooriFlag: 1=예, 0=아니오 -->
+        </where>
+    </sql>
+
+    <select id="selectList" resultMap="ServiceProviderResultMap">
+        SELECT <include refid="cols"/>
+        FROM T_SERVICE_PROVIDER
+        <include refid="searchWhere"/>
+        ORDER BY PROVIDER_CD
+        OFFSET #{offset} ROWS FETCH NEXT #{limit} ROWS ONLY
+    </select>
+
+    <select id="countList" resultType="long">
+        SELECT COUNT(*) FROM T_SERVICE_PROVIDER
+        <include refid="searchWhere"/>
+    </select>
+
+    <select id="selectOne" resultMap="ServiceProviderResultMap">
+        SELECT <include refid="cols"/>
+        FROM T_SERVICE_PROVIDER
+        WHERE PROVIDER_CD = #{providerCd}
+    </select>
+
+    <insert id="insert" parameterType="kr.co.nh.atms.web.serviceprovider.entity.ServiceProvider">
+        INSERT INTO T_SERVICE_PROVIDER (
+            PROVIDER_CD, KNBANK_FLAG, PROVIDER_NAME, PROVIDER_TYPE_CD,
+            PERSON, PHONE_NO, FAX_NO, EMAIL, ZIP_CD, ADDRESS,
+            SEND_TYPE, FAULT_SEND_TYPE, USE_YN, WOORI_FLAG
+        ) VALUES (
+            #{providerCd}, #{knbankFlag}, #{providerName}, #{providerTypeCd},
+            #{person}, #{phoneNo}, #{faxNo}, #{email}, #{zipCd}, #{address},
+            #{sendType}, #{faultSendType}, #{useYn}, #{wooriFlag}
+        )
+    </insert>
+
+    <update id="update" parameterType="kr.co.nh.atms.web.serviceprovider.entity.ServiceProvider">
+        UPDATE T_SERVICE_PROVIDER
+        <set>
+            <if test="knbankFlag != null">KNBANK_FLAG = #{knbankFlag},</if>
+            <if test="providerName != null">PROVIDER_NAME = #{providerName},</if>
+            <if test="providerTypeCd != null">PROVIDER_TYPE_CD = #{providerTypeCd},</if>
+            <if test="person != null">PERSON = #{person},</if>
+            <if test="phoneNo != null">PHONE_NO = #{phoneNo},</if>
+            <if test="faxNo != null">FAX_NO = #{faxNo},</if>
+            <if test="email != null">EMAIL = #{email},</if>
+            <if test="zipCd != null">ZIP_CD = #{zipCd},</if>
+            <if test="address != null">ADDRESS = #{address},</if>
+            <if test="sendType != null">SEND_TYPE = #{sendType},</if>
+            <if test="faultSendType != null">FAULT_SEND_TYPE = #{faultSendType},</if>
+            <if test="useYn != null">USE_YN = #{useYn},</if>
+            <if test="wooriFlag != null">WOORI_FLAG = #{wooriFlag},</if>
+        </set>
+        WHERE PROVIDER_CD = #{providerCd}
+    </update>
+
+    <delete id="delete">
+        DELETE FROM T_SERVICE_PROVIDER WHERE PROVIDER_CD = #{providerCd}
+    </delete>
+
+</mapper>

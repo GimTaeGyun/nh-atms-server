@@ -1,0 +1,489 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.nh.atms.batch.mapper.Batday08Mapper">
+
+    <!-- =================================================================
+         batday08 : 장애/거래 보고서 집계 - AS-IS atmb sqlmap/batday08.xml 이식
+         AS-IS 는 기기별 루프 + 건별 INSERT 였으나 동일 결과의 set 기반
+         INSERT...SELECT 로 재구성 (집계 결과 논리 동등).
+         TO-BE 스키마 대응:
+           t_atm/t_atmgroup/t_corner/t_atmmodel -> T_ATM/T_ATM_GROUP/T_CORNER/T_ATM_MODEL
+           t_faultanalysis -> T_FAULT_ANALYSIS
+           t_transactionjournal/t_cashtransaction/t_checktransaction
+             -> T_TRANSACTION_JOURNAL/T_CASH_TRANSACTION/T_CHECK_TRANSACTION
+           t_transactioncode -> T_TRANSACTION_CODE (신규 정의 - sql/stat-tables-oracle.sql,
+             데이터 미시드 시 거래종류(TR_TYPE_CD) 기반 집계 항목은 0건)
+         BANK_CD 는 NH 단일은행 상수(atms.batch.bank-cd, 기본 011) 사용 -
+         AS-IS 의 t_atmgroup.parent_id = 은행코드 필터는 NH 그룹체계와 달라 제외.
+         ================================================================= -->
+
+    <!-- 보고서 공통 집계 컬럼명 (T_DAILY_REPORT01~05,07 공유) -->
+    <sql id="reportBodyCols">
+        , FAULT_01
+        , FAULT_03
+        , FAULT_12
+        , FAULT_22
+        , FAULT_32
+        , FAULT_61
+        , FAULT_71_O
+        , FAULT_71_I
+        , FAULT_91
+        , FAULT_02
+        , FAULT_15
+        , FAULT_25
+        , FAULT_73
+        , FAULT_93
+        , FAULT_18
+        , FAULT_39
+        , FAULT_66
+        , FAULT_78
+        , FAULT_98
+        , FAULT_04
+        , FAULT_75
+        , FAULT_77
+        , FAULT_95
+        , FAULT_97
+        , FAULT_16
+        , FAULT_36
+        , FAULT_63
+        , FAULT_ETC
+        , TR_AMT_OMAN_0, TR_AMT_OMAN_I
+        , TR_AMT_CHK_0 , TR_AMT_CHK_I
+        , TR_D_CNT_01, TR_D_AMT_01, TR_D_FEE_01
+        , TR_D_CNT_02, TR_D_AMT_02, TR_D_FEE_02
+        , TR_D_CNT_03, TR_D_AMT_03, TR_D_FEE_03
+        , TR_D_CNT_04, TR_D_AMT_04, TR_D_FEE_04
+        , TR_D_CNT_05, TR_D_AMT_05, TR_D_FEE_05
+        , TR_D_CNT_06, TR_D_AMT_06, TR_D_FEE_06
+        , TR_D_CNT_07, TR_D_AMT_07, TR_D_FEE_07
+        , TR_D_CNT_08, TR_D_AMT_08, TR_D_FEE_08
+        , TR_D_CNT_09, TR_D_AMT_09, TR_D_FEE_09
+        , TR_D_CNT_99, TR_D_AMT_99, TR_D_FEE_99
+        , TR_T_CNT_01, TR_T_AMT_01, TR_T_FEE_01
+        , TR_T_CNT_02, TR_T_AMT_02, TR_T_FEE_02
+        , TR_T_CNT_03, TR_T_AMT_03, TR_T_FEE_03
+        , TR_T_CNT_04, TR_T_AMT_04, TR_T_FEE_04
+        , TR_T_CNT_05, TR_T_AMT_05, TR_T_FEE_05
+        , TR_T_CNT_06, TR_T_AMT_06, TR_T_FEE_06
+        , TR_T_CNT_07, TR_T_AMT_07, TR_T_FEE_07
+        , TR_T_CNT_08, TR_T_AMT_08, TR_T_FEE_08
+        , TR_T_CNT_09, TR_T_AMT_09, TR_T_FEE_09
+        , TR_T_CNT_99, TR_T_AMT_99, TR_T_FEE_99
+    </sql>
+
+    <!-- T_DAILY_REPORT01 상향집계용 SUM 목록 (02~05,07 공유) -->
+    <sql id="reportBodySums">
+        , SUM(FAULT_01) AS FAULT_01
+        , SUM(FAULT_03) AS FAULT_03
+        , SUM(FAULT_12) AS FAULT_12
+        , SUM(FAULT_22) AS FAULT_22
+        , SUM(FAULT_32) AS FAULT_32
+        , SUM(FAULT_61) AS FAULT_61
+        , SUM(FAULT_71_O) AS FAULT_71_O
+        , SUM(FAULT_71_I) AS FAULT_71_I
+        , SUM(FAULT_91) AS FAULT_91
+        , SUM(FAULT_02) AS FAULT_02
+        , SUM(FAULT_15) AS FAULT_15
+        , SUM(FAULT_25) AS FAULT_25
+        , SUM(FAULT_73) AS FAULT_73
+        , SUM(FAULT_93) AS FAULT_93
+        , SUM(FAULT_18) AS FAULT_18
+        , SUM(FAULT_39) AS FAULT_39
+        , SUM(FAULT_66) AS FAULT_66
+        , SUM(FAULT_78) AS FAULT_78
+        , SUM(FAULT_98) AS FAULT_98
+        , SUM(FAULT_04) AS FAULT_04
+        , SUM(FAULT_75) AS FAULT_75
+        , SUM(FAULT_77) AS FAULT_77
+        , SUM(FAULT_95) AS FAULT_95
+        , SUM(FAULT_97) AS FAULT_97
+        , SUM(FAULT_16) AS FAULT_16
+        , SUM(FAULT_36) AS FAULT_36
+        , SUM(FAULT_63) AS FAULT_63
+        , SUM(FAULT_ETC) AS FAULT_ETC
+        , SUM(TR_AMT_OMAN_0) AS TR_AMT_OMAN_0, SUM(TR_AMT_OMAN_I) AS TR_AMT_OMAN_I
+        , SUM(TR_AMT_CHK_0)  AS TR_AMT_CHK_0 , SUM(TR_AMT_CHK_I)  AS TR_AMT_CHK_I
+        , SUM(TR_D_CNT_01) AS TR_D_CNT_01, SUM(TR_D_AMT_01) AS TR_D_AMT_01, SUM(TR_D_FEE_01) AS TR_D_FEE_01
+        , SUM(TR_D_CNT_02) AS TR_D_CNT_02, SUM(TR_D_AMT_02) AS TR_D_AMT_02, SUM(TR_D_FEE_02) AS TR_D_FEE_02
+        , SUM(TR_D_CNT_03) AS TR_D_CNT_03, SUM(TR_D_AMT_03) AS TR_D_AMT_03, SUM(TR_D_FEE_03) AS TR_D_FEE_03
+        , SUM(TR_D_CNT_04) AS TR_D_CNT_04, SUM(TR_D_AMT_04) AS TR_D_AMT_04, SUM(TR_D_FEE_04) AS TR_D_FEE_04
+        , SUM(TR_D_CNT_05) AS TR_D_CNT_05, SUM(TR_D_AMT_05) AS TR_D_AMT_05, SUM(TR_D_FEE_05) AS TR_D_FEE_05
+        , SUM(TR_D_CNT_06) AS TR_D_CNT_06, SUM(TR_D_AMT_06) AS TR_D_AMT_06, SUM(TR_D_FEE_06) AS TR_D_FEE_06
+        , SUM(TR_D_CNT_07) AS TR_D_CNT_07, SUM(TR_D_AMT_07) AS TR_D_AMT_07, SUM(TR_D_FEE_07) AS TR_D_FEE_07
+        , SUM(TR_D_CNT_08) AS TR_D_CNT_08, SUM(TR_D_AMT_08) AS TR_D_AMT_08, SUM(TR_D_FEE_08) AS TR_D_FEE_08
+        , SUM(TR_D_CNT_09) AS TR_D_CNT_09, SUM(TR_D_AMT_09) AS TR_D_AMT_09, SUM(TR_D_FEE_09) AS TR_D_FEE_09
+        , SUM(TR_D_CNT_99) AS TR_D_CNT_99, SUM(TR_D_AMT_99) AS TR_D_AMT_99, SUM(TR_D_FEE_99) AS TR_D_FEE_99
+        , SUM(TR_T_CNT_01) AS TR_T_CNT_01, SUM(TR_T_AMT_01) AS TR_T_AMT_01, SUM(TR_T_FEE_01) AS TR_T_FEE_01
+        , SUM(TR_T_CNT_02) AS TR_T_CNT_02, SUM(TR_T_AMT_02) AS TR_T_AMT_02, SUM(TR_T_FEE_02) AS TR_T_FEE_02
+        , SUM(TR_T_CNT_03) AS TR_T_CNT_03, SUM(TR_T_AMT_03) AS TR_T_AMT_03, SUM(TR_T_FEE_03) AS TR_T_FEE_03
+        , SUM(TR_T_CNT_04) AS TR_T_CNT_04, SUM(TR_T_AMT_04) AS TR_T_AMT_04, SUM(TR_T_FEE_04) AS TR_T_FEE_04
+        , SUM(TR_T_CNT_05) AS TR_T_CNT_05, SUM(TR_T_AMT_05) AS TR_T_AMT_05, SUM(TR_T_FEE_05) AS TR_T_FEE_05
+        , SUM(TR_T_CNT_06) AS TR_T_CNT_06, SUM(TR_T_AMT_06) AS TR_T_AMT_06, SUM(TR_T_FEE_06) AS TR_T_FEE_06
+        , SUM(TR_T_CNT_07) AS TR_T_CNT_07, SUM(TR_T_AMT_07) AS TR_T_AMT_07, SUM(TR_T_FEE_07) AS TR_T_FEE_07
+        , SUM(TR_T_CNT_08) AS TR_T_CNT_08, SUM(TR_T_AMT_08) AS TR_T_AMT_08, SUM(TR_T_FEE_08) AS TR_T_FEE_08
+        , SUM(TR_T_CNT_09) AS TR_T_CNT_09, SUM(TR_T_AMT_09) AS TR_T_AMT_09, SUM(TR_T_FEE_09) AS TR_T_FEE_09
+        , SUM(TR_T_CNT_99) AS TR_T_CNT_99, SUM(TR_T_AMT_99) AS TR_T_AMT_99, SUM(TR_T_FEE_99) AS TR_T_FEE_99
+    </sql>
+
+    <!-- 상향집계(02~05,07) 공통 대상 필터 : AS-IS 동일 -->
+    <sql id="rollupWhere">
+         WHERE TR_DATE = #{trDate}
+           AND ATM_TYPE_CD IN ('1', '2', '4')
+           AND MODEL_CD NOT IN ('102', '201', '202')
+           AND ATM_STATUS = '1'
+    </sql>
+
+    <delete id="deleteReport01">DELETE FROM T_DAILY_REPORT01 WHERE TR_DATE = #{trDate}</delete>
+    <delete id="deleteReport02">DELETE FROM T_DAILY_REPORT02 WHERE TR_DATE = #{trDate}</delete>
+    <delete id="deleteReport03">DELETE FROM T_DAILY_REPORT03 WHERE TR_DATE = #{trDate}</delete>
+    <delete id="deleteReport04">DELETE FROM T_DAILY_REPORT04 WHERE TR_DATE = #{trDate}</delete>
+    <delete id="deleteReport05">DELETE FROM T_DAILY_REPORT05 WHERE TR_DATE = #{trDate}</delete>
+    <delete id="deleteReport07">DELETE FROM T_DAILY_REPORT07 WHERE TR_DATE = #{trDate}</delete>
+
+    <select id="countReportTarget" resultType="long">
+        SELECT COUNT(*)
+          FROM T_ATM a
+               INNER JOIN T_ATM_GROUP g ON a.TERM_GROUP_ID = g.TERM_GROUP_ID
+               INNER JOIN T_CORNER c ON a.TERM_GROUP_ID = c.TERM_GROUP_ID AND a.CORNER_CD = c.CORNER_CD
+               INNER JOIN T_ATM_MODEL m ON a.MODEL_CD = m.MODEL_CD
+         WHERE a.PROTOCOL_TYPE = 'T'
+           AND a.ATM_STATUS = '1'
+    </select>
+
+    <!-- 1. 기기별 장애/거래 집계 (AS-IS sel_dailyreport01 + sel_sum_faultcount
+            + sel_sum_trcount_01/02/03 + ins_t_dailyreport01 통합) -->
+    <insert id="insertReport01">
+        INSERT INTO T_DAILY_REPORT01 (
+            BANK_CD, TR_DATE, TERM_GROUP_ID, TERM_ID, CORNER_CD, CORNER_NAME,
+            ATM_STATUS, AREA_CD, SUPER_ID, ATM_CO_CD, ATM_TYPE_CD, MODEL_CD,
+            MANAGE_TYPE_CD, LOCATION_TYPE_CD, CORNER_TYPE_CD, OPERATION_TYPE_CD,
+            SERVICE_START_TIME, SERVICE_END_TIME, INTRODUCE_YEAR, CORNER_STATUS
+            <include refid="reportBodyCols"/>
+        )
+        SELECT base.BANK_CD, base.TR_DATE, base.TERM_GROUP_ID, base.TERM_ID,
+               base.CORNER_CD, base.CORNER_NAME, base.ATM_STATUS, base.AREA_CD,
+               base.SUPER_ID, base.ATM_CO_CD, base.ATM_TYPE_CD, base.MODEL_CD,
+               base.MANAGE_TYPE_CD, base.LOCATION_TYPE_CD, base.CORNER_TYPE_CD,
+               base.OPERATION_TYPE_CD, base.SERVICE_START_TIME, base.SERVICE_END_TIME,
+               base.INTRODUCE_YEAR, base.CORNER_STATUS
+             , NVL(f.FAULT_01, 0) AS FAULT_01
+             , NVL(f.FAULT_03, 0) AS FAULT_03
+             , NVL(f.FAULT_12, 0) AS FAULT_12
+             , NVL(f.FAULT_22, 0) AS FAULT_22
+             , NVL(f.FAULT_32, 0) AS FAULT_32
+             , NVL(f.FAULT_61, 0) AS FAULT_61
+             , NVL(f.FAULT_71_O, 0) AS FAULT_71_O
+             , NVL(f.FAULT_71_I, 0) AS FAULT_71_I
+             , NVL(f.FAULT_91, 0) AS FAULT_91
+             , NVL(f.FAULT_02, 0) AS FAULT_02
+             , NVL(f.FAULT_15, 0) AS FAULT_15
+             , NVL(f.FAULT_25, 0) AS FAULT_25
+             , NVL(f.FAULT_73, 0) AS FAULT_73
+             , NVL(f.FAULT_93, 0) AS FAULT_93
+             , NVL(f.FAULT_18, 0) AS FAULT_18
+             , NVL(f.FAULT_39, 0) AS FAULT_39
+             , NVL(f.FAULT_66, 0) AS FAULT_66
+             , NVL(f.FAULT_78, 0) AS FAULT_78
+             , NVL(f.FAULT_98, 0) AS FAULT_98
+             , NVL(f.FAULT_04, 0) AS FAULT_04
+             , NVL(f.FAULT_75, 0) AS FAULT_75
+             , NVL(f.FAULT_77, 0) AS FAULT_77
+             , NVL(f.FAULT_95, 0) AS FAULT_95
+             , NVL(f.FAULT_97, 0) AS FAULT_97
+             , NVL(f.FAULT_16, 0) AS FAULT_16
+             , NVL(f.FAULT_36, 0) AS FAULT_36
+             , NVL(f.FAULT_63, 0) AS FAULT_63
+             , NVL(f.FAULT_ETC, 0) AS FAULT_ETC
+             , NVL(o.TR_AMT_OMAN_0, 0) AS TR_AMT_OMAN_0, NVL(o.TR_AMT_OMAN_I, 0) AS TR_AMT_OMAN_I
+             , NVL(ck.TR_AMT_CHK_0, 0) AS TR_AMT_CHK_0 , NVL(ck.TR_AMT_CHK_I, 0) AS TR_AMT_CHK_I
+             , NVL(t.TR_D_CNT_01, 0) AS TR_D_CNT_01, NVL(t.TR_D_AMT_01, 0) AS TR_D_AMT_01, NVL(t.TR_D_FEE_01, 0) AS TR_D_FEE_01
+             , NVL(t.TR_D_CNT_02, 0) AS TR_D_CNT_02, NVL(t.TR_D_AMT_02, 0) AS TR_D_AMT_02, NVL(t.TR_D_FEE_02, 0) AS TR_D_FEE_02
+             , NVL(t.TR_D_CNT_03, 0) AS TR_D_CNT_03, NVL(t.TR_D_AMT_03, 0) AS TR_D_AMT_03, NVL(t.TR_D_FEE_03, 0) AS TR_D_FEE_03
+             , NVL(t.TR_D_CNT_04, 0) AS TR_D_CNT_04, NVL(t.TR_D_AMT_04, 0) AS TR_D_AMT_04, NVL(t.TR_D_FEE_04, 0) AS TR_D_FEE_04
+             , NVL(t.TR_D_CNT_05, 0) AS TR_D_CNT_05, NVL(t.TR_D_AMT_05, 0) AS TR_D_AMT_05, NVL(t.TR_D_FEE_05, 0) AS TR_D_FEE_05
+             , NVL(t.TR_D_CNT_06, 0) AS TR_D_CNT_06, NVL(t.TR_D_AMT_06, 0) AS TR_D_AMT_06, NVL(t.TR_D_FEE_06, 0) AS TR_D_FEE_06
+             , NVL(t.TR_D_CNT_07, 0) AS TR_D_CNT_07, NVL(t.TR_D_AMT_07, 0) AS TR_D_AMT_07, NVL(t.TR_D_FEE_07, 0) AS TR_D_FEE_07
+             , NVL(t.TR_D_CNT_08, 0) AS TR_D_CNT_08, NVL(t.TR_D_AMT_08, 0) AS TR_D_AMT_08, NVL(t.TR_D_FEE_08, 0) AS TR_D_FEE_08
+             , NVL(t.TR_D_CNT_09, 0) AS TR_D_CNT_09, NVL(t.TR_D_AMT_09, 0) AS TR_D_AMT_09, NVL(t.TR_D_FEE_09, 0) AS TR_D_FEE_09
+             , NVL(t.TR_D_CNT_99, 0) AS TR_D_CNT_99, NVL(t.TR_D_AMT_99, 0) AS TR_D_AMT_99, NVL(t.TR_D_FEE_99, 0) AS TR_D_FEE_99
+             , NVL(t.TR_T_CNT_01, 0) AS TR_T_CNT_01, NVL(t.TR_T_AMT_01, 0) AS TR_T_AMT_01, NVL(t.TR_T_FEE_01, 0) AS TR_T_FEE_01
+             , NVL(t.TR_T_CNT_02, 0) AS TR_T_CNT_02, NVL(t.TR_T_AMT_02, 0) AS TR_T_AMT_02, NVL(t.TR_T_FEE_02, 0) AS TR_T_FEE_02
+             , NVL(t.TR_T_CNT_03, 0) AS TR_T_CNT_03, NVL(t.TR_T_AMT_03, 0) AS TR_T_AMT_03, NVL(t.TR_T_FEE_03, 0) AS TR_T_FEE_03
+             , NVL(t.TR_T_CNT_04, 0) AS TR_T_CNT_04, NVL(t.TR_T_AMT_04, 0) AS TR_T_AMT_04, NVL(t.TR_T_FEE_04, 0) AS TR_T_FEE_04
+             , NVL(t.TR_T_CNT_05, 0) AS TR_T_CNT_05, NVL(t.TR_T_AMT_05, 0) AS TR_T_AMT_05, NVL(t.TR_T_FEE_05, 0) AS TR_T_FEE_05
+             , NVL(t.TR_T_CNT_06, 0) AS TR_T_CNT_06, NVL(t.TR_T_AMT_06, 0) AS TR_T_AMT_06, NVL(t.TR_T_FEE_06, 0) AS TR_T_FEE_06
+             , NVL(t.TR_T_CNT_07, 0) AS TR_T_CNT_07, NVL(t.TR_T_AMT_07, 0) AS TR_T_AMT_07, NVL(t.TR_T_FEE_07, 0) AS TR_T_FEE_07
+             , NVL(t.TR_T_CNT_08, 0) AS TR_T_CNT_08, NVL(t.TR_T_AMT_08, 0) AS TR_T_AMT_08, NVL(t.TR_T_FEE_08, 0) AS TR_T_FEE_08
+             , NVL(t.TR_T_CNT_09, 0) AS TR_T_CNT_09, NVL(t.TR_T_AMT_09, 0) AS TR_T_AMT_09, NVL(t.TR_T_FEE_09, 0) AS TR_T_FEE_09
+             , NVL(t.TR_T_CNT_99, 0) AS TR_T_CNT_99, NVL(t.TR_T_AMT_99, 0) AS TR_T_AMT_99, NVL(t.TR_T_FEE_99, 0) AS TR_T_FEE_99
+          FROM (
+                 SELECT #{bankCd}                       AS BANK_CD
+                      , #{trDate}                       AS TR_DATE
+                      , a.TERM_GROUP_ID                 AS TERM_GROUP_ID
+                      , a.TERM_ID                       AS TERM_ID
+                      , c.CORNER_CD                     AS CORNER_CD
+                      , c.CORNER_NAME                   AS CORNER_NAME
+                      , a.ATM_STATUS                    AS ATM_STATUS
+                      , CASE c.AREA1_CD
+                             WHEN '서울' THEN '01' WHEN '강원' THEN '02'
+                             WHEN '경기' THEN '03' WHEN '경남' THEN '04'
+                             WHEN '경북' THEN '05' WHEN '광주' THEN '06'
+                             WHEN '대구' THEN '07' WHEN '대전' THEN '08'
+                             WHEN '부산' THEN '09' WHEN '울산' THEN '10'
+                             WHEN '인천' THEN '11' WHEN '전남' THEN '12'
+                             WHEN '전북' THEN '13' WHEN '제주' THEN '14'
+                             WHEN '충남' THEN '15' WHEN '충북' THEN '16'
+                             ELSE '99'
+                        END                             AS AREA_CD
+                      , g.SUPER_ID                      AS SUPER_ID
+                      , a.ATM_CO_CD                     AS ATM_CO_CD
+                      , m.ATM_TYPE_CD                   AS ATM_TYPE_CD
+                      , a.MODEL_CD                      AS MODEL_CD
+                      , c.MANAGE_TYPE_CD                AS MANAGE_TYPE_CD
+                      , c.LOCATION_TYPE_CD              AS LOCATION_TYPE_CD
+                      , c.CORNER_TYPE_CD                AS CORNER_TYPE_CD
+                      , c.OPERATION_TYPE_CD             AS OPERATION_TYPE_CD
+                      , c.SERVICE_START_TIME            AS SERVICE_START_TIME
+                      , c.SERVICE_END_TIME              AS SERVICE_END_TIME
+                      , SUBSTR(a.INTRODUCE_DATE, 1, 4)  AS INTRODUCE_YEAR
+                      , c.CORNER_STATUS                 AS CORNER_STATUS
+                   FROM T_ATM a
+                        INNER JOIN T_ATM_GROUP g ON a.TERM_GROUP_ID = g.TERM_GROUP_ID
+                        INNER JOIN T_CORNER c ON a.TERM_GROUP_ID = c.TERM_GROUP_ID
+                                             AND a.CORNER_CD = c.CORNER_CD
+                        INNER JOIN T_ATM_MODEL m ON a.MODEL_CD = m.MODEL_CD
+                  WHERE a.PROTOCOL_TYPE = 'T'
+                    AND a.ATM_STATUS = '1'    -- 1:운영중
+               ) base
+               LEFT JOIN (
+                 -- AS-IS sel_sum_faultcount : 장애그룹코드별 건수 (FAULT_ETC 는 전체건수, AS-IS 동일)
+                 SELECT TERM_GROUP_ID, TERM_ID
+                      , SUM(CASE WHEN ERR_GROUP_CD = '01' THEN 1 ELSE 0 END) AS FAULT_01
+                      , SUM(CASE WHEN ERR_GROUP_CD = '03' THEN 1 ELSE 0 END) AS FAULT_03
+                      , SUM(CASE WHEN ERR_GROUP_CD = '12' THEN 1 ELSE 0 END) AS FAULT_12
+                      , SUM(CASE WHEN ERR_GROUP_CD = '22' THEN 1 ELSE 0 END) AS FAULT_22
+                      , SUM(CASE WHEN ERR_GROUP_CD = '32' THEN 1 ELSE 0 END) AS FAULT_32
+                      , SUM(CASE WHEN ERR_GROUP_CD = '61' THEN 1 ELSE 0 END) AS FAULT_61
+                      , SUM(CASE WHEN ERR_GROUP_CD = '71' AND DEVICE_ID = '7' THEN 1 ELSE 0 END) AS FAULT_71_O
+                      , SUM(CASE WHEN ERR_GROUP_CD = '71' AND DEVICE_ID = 'J' THEN 1 ELSE 0 END) AS FAULT_71_I
+                      , SUM(CASE WHEN ERR_GROUP_CD = '91' THEN 1 ELSE 0 END) AS FAULT_91
+                      , SUM(CASE WHEN ERR_GROUP_CD = '02' THEN 1 ELSE 0 END) AS FAULT_02
+                      , SUM(CASE WHEN ERR_GROUP_CD = '15' THEN 1 ELSE 0 END) AS FAULT_15
+                      , SUM(CASE WHEN ERR_GROUP_CD = '25' THEN 1 ELSE 0 END) AS FAULT_25
+                      , SUM(CASE WHEN ERR_GROUP_CD = '73' THEN 1 ELSE 0 END) AS FAULT_73
+                      , SUM(CASE WHEN ERR_GROUP_CD = '93' THEN 1 ELSE 0 END) AS FAULT_93
+                      , SUM(CASE WHEN ERR_GROUP_CD = '18' THEN 1 ELSE 0 END) AS FAULT_18
+                      , SUM(CASE WHEN ERR_GROUP_CD = '39' THEN 1 ELSE 0 END) AS FAULT_39
+                      , SUM(CASE WHEN ERR_GROUP_CD = '66' THEN 1 ELSE 0 END) AS FAULT_66
+                      , SUM(CASE WHEN ERR_GROUP_CD = '78' THEN 1 ELSE 0 END) AS FAULT_78
+                      , SUM(CASE WHEN ERR_GROUP_CD = '98' THEN 1 ELSE 0 END) AS FAULT_98
+                      , SUM(CASE WHEN ERR_GROUP_CD = '04' THEN 1 ELSE 0 END) AS FAULT_04
+                      , SUM(CASE WHEN ERR_GROUP_CD = '75' THEN 1 ELSE 0 END) AS FAULT_75
+                      , SUM(CASE WHEN ERR_GROUP_CD = '77' THEN 1 ELSE 0 END) AS FAULT_77
+                      , SUM(CASE WHEN ERR_GROUP_CD = '95' THEN 1 ELSE 0 END) AS FAULT_95
+                      , SUM(CASE WHEN ERR_GROUP_CD = '97' THEN 1 ELSE 0 END) AS FAULT_97
+                      , SUM(CASE WHEN ERR_GROUP_CD = '16' THEN 1 ELSE 0 END) AS FAULT_16
+                      , SUM(CASE WHEN ERR_GROUP_CD = '36' THEN 1 ELSE 0 END) AS FAULT_36
+                      , SUM(CASE WHEN ERR_GROUP_CD = '63' THEN 1 ELSE 0 END) AS FAULT_63
+                      , COUNT(*) AS FAULT_ETC
+                   FROM T_FAULT_ANALYSIS
+                  WHERE JNL_DATE = #{trDate}
+                  GROUP BY TERM_GROUP_ID, TERM_ID
+               ) f ON base.TERM_GROUP_ID = f.TERM_GROUP_ID AND base.TERM_ID = f.TERM_ID
+               LEFT JOIN (
+                 -- AS-IS sel_sum_trcount_01 : 5만원권 출금(01)/입금(03) 금액
+                 SELECT t1.TERM_GROUP_ID, t1.TERM_ID
+                      , SUM(CASE WHEN t3.TR_TYPE_CD = '01' THEN TO_NUMBER(t2.DENOM_CD) * t2.DENOM_COUNT ELSE 0 END) AS TR_AMT_OMAN_0
+                      , SUM(CASE WHEN t3.TR_TYPE_CD = '03' THEN TO_NUMBER(t2.DENOM_CD) * t2.DENOM_COUNT ELSE 0 END) AS TR_AMT_OMAN_I
+                   FROM T_TRANSACTION_JOURNAL t1
+                        INNER JOIN T_CASH_TRANSACTION t2
+                                ON  t1.TERM_GROUP_ID = t2.TERM_GROUP_ID
+                               AND t1.TERM_ID       = t2.TERM_ID
+                               AND t1.JNL_DATE      = t2.JNL_DATE
+                               AND t1.JNL_TIME      = t2.JNL_TIME
+                        INNER JOIN T_TRANSACTION_CODE t3
+                                ON TRIM(t1.TR_TYPE) = TRIM(t3.TR_CD)
+                  WHERE t1.JNL_DATE = #{trDate}
+                    AND t2.DENOM_CD = '50000'
+                    AND t3.TR_TYPE_CD IN ('01', '03')
+                  GROUP BY t1.TERM_GROUP_ID, t1.TERM_ID
+               ) o ON base.TERM_GROUP_ID = o.TERM_GROUP_ID AND base.TERM_ID = o.TERM_ID
+               LEFT JOIN (
+                 -- AS-IS sel_sum_trcount_02 : 수표 출금(01)/입금(03) 금액
+                 SELECT t1.TERM_GROUP_ID, t1.TERM_ID
+                      , SUM(CASE WHEN t3.TR_TYPE_CD = '01' THEN TO_NUMBER(t2.CHECK_AMOUNT) ELSE 0 END) AS TR_AMT_CHK_0
+                      , SUM(CASE WHEN t3.TR_TYPE_CD = '03' THEN TO_NUMBER(t2.CHECK_AMOUNT) ELSE 0 END) AS TR_AMT_CHK_I
+                   FROM T_TRANSACTION_JOURNAL t1
+                        INNER JOIN T_CHECK_TRANSACTION t2
+                                ON  t1.TERM_GROUP_ID = t2.TERM_GROUP_ID
+                               AND t1.TERM_ID       = t2.TERM_ID
+                               AND t1.JNL_DATE      = t2.JNL_DATE
+                               AND t1.JNL_TIME      = t2.JNL_TIME
+                        INNER JOIN T_TRANSACTION_CODE t3
+                                ON TRIM(t1.TR_TYPE) = TRIM(t3.TR_CD)
+                  WHERE t1.JNL_DATE = #{trDate}
+                    AND t3.TR_TYPE_CD IN ('01', '03')
+                  GROUP BY t1.TERM_GROUP_ID, t1.TERM_ID
+               ) ck ON base.TERM_GROUP_ID = ck.TERM_GROUP_ID AND base.TERM_ID = ck.TERM_ID
+               LEFT JOIN (
+                 -- AS-IS sel_sum_trcount_03 : 자행(D)/타행(T) x 거래종류별 건수/금액/수수료
+                 SELECT TERM_GROUP_ID, TERM_ID
+                      , SUM(CASE WHEN JA_BANK = '1' AND TR_TYPE_CD = '01' THEN TR_CNT ELSE 0 END) AS TR_D_CNT_01
+                      , SUM(CASE WHEN JA_BANK = '1' AND TR_TYPE_CD = '01' THEN TR_AMT ELSE 0 END) AS TR_D_AMT_01
+                      , SUM(CASE WHEN JA_BANK = '1' AND TR_TYPE_CD = '01' THEN TR_FEE ELSE 0 END) AS TR_D_FEE_01
+                      , SUM(CASE WHEN JA_BANK = '1' AND TR_TYPE_CD = '02' THEN TR_CNT ELSE 0 END) AS TR_D_CNT_02
+                      , SUM(CASE WHEN JA_BANK = '1' AND TR_TYPE_CD = '02' THEN TR_AMT ELSE 0 END) AS TR_D_AMT_02
+                      , SUM(CASE WHEN JA_BANK = '1' AND TR_TYPE_CD = '02' THEN TR_FEE ELSE 0 END) AS TR_D_FEE_02
+                      , SUM(CASE WHEN JA_BANK = '1' AND TR_TYPE_CD = '03' THEN TR_CNT ELSE 0 END) AS TR_D_CNT_03
+                      , SUM(CASE WHEN JA_BANK = '1' AND TR_TYPE_CD = '03' THEN TR_AMT ELSE 0 END) AS TR_D_AMT_03
+                      , SUM(CASE WHEN JA_BANK = '1' AND TR_TYPE_CD = '03' THEN TR_FEE ELSE 0 END) AS TR_D_FEE_03
+                      , SUM(CASE WHEN JA_BANK = '1' AND TR_TYPE_CD = '04' THEN TR_CNT ELSE 0 END) AS TR_D_CNT_04
+                      , SUM(CASE WHEN JA_BANK = '1' AND TR_TYPE_CD = '04' THEN TR_AMT ELSE 0 END) AS TR_D_AMT_04
+                      , SUM(CASE WHEN JA_BANK = '1' AND TR_TYPE_CD = '04' THEN TR_FEE ELSE 0 END) AS TR_D_FEE_04
+                      , SUM(CASE WHEN JA_BANK = '1' AND TR_TYPE_CD = '05' THEN TR_CNT ELSE 0 END) AS TR_D_CNT_05
+                      , SUM(CASE WHEN JA_BANK = '1' AND TR_TYPE_CD = '05' THEN TR_AMT ELSE 0 END) AS TR_D_AMT_05
+                      , SUM(CASE WHEN JA_BANK = '1' AND TR_TYPE_CD = '05' THEN TR_FEE ELSE 0 END) AS TR_D_FEE_05
+                      , SUM(CASE WHEN JA_BANK = '1' AND TR_TYPE_CD = '06' THEN TR_CNT ELSE 0 END) AS TR_D_CNT_06
+                      , SUM(CASE WHEN JA_BANK = '1' AND TR_TYPE_CD = '06' THEN TR_AMT ELSE 0 END) AS TR_D_AMT_06
+                      , SUM(CASE WHEN JA_BANK = '1' AND TR_TYPE_CD = '06' THEN TR_FEE ELSE 0 END) AS TR_D_FEE_06
+                      , SUM(CASE WHEN JA_BANK = '1' AND TR_TYPE_CD = '07' THEN TR_CNT ELSE 0 END) AS TR_D_CNT_07
+                      , SUM(CASE WHEN JA_BANK = '1' AND TR_TYPE_CD = '07' THEN TR_AMT ELSE 0 END) AS TR_D_AMT_07
+                      , SUM(CASE WHEN JA_BANK = '1' AND TR_TYPE_CD = '07' THEN TR_FEE ELSE 0 END) AS TR_D_FEE_07
+                      , SUM(CASE WHEN JA_BANK = '1' AND TR_TYPE_CD = '08' THEN TR_CNT ELSE 0 END) AS TR_D_CNT_08
+                      , SUM(CASE WHEN JA_BANK = '1' AND TR_TYPE_CD = '08' THEN TR_AMT ELSE 0 END) AS TR_D_AMT_08
+                      , SUM(CASE WHEN JA_BANK = '1' AND TR_TYPE_CD = '08' THEN TR_FEE ELSE 0 END) AS TR_D_FEE_08
+                      , SUM(CASE WHEN JA_BANK = '1' AND TR_TYPE_CD = '09' THEN TR_CNT ELSE 0 END) AS TR_D_CNT_09
+                      , SUM(CASE WHEN JA_BANK = '1' AND TR_TYPE_CD = '09' THEN TR_AMT ELSE 0 END) AS TR_D_AMT_09
+                      , SUM(CASE WHEN JA_BANK = '1' AND TR_TYPE_CD = '09' THEN TR_FEE ELSE 0 END) AS TR_D_FEE_09
+                      , SUM(CASE WHEN JA_BANK = '1' AND TR_TYPE_CD = '99' THEN TR_CNT ELSE 0 END) AS TR_D_CNT_99
+                      , SUM(CASE WHEN JA_BANK = '1' AND TR_TYPE_CD = '99' THEN TR_AMT ELSE 0 END) AS TR_D_AMT_99
+                      , SUM(CASE WHEN JA_BANK = '1' AND TR_TYPE_CD = '99' THEN TR_FEE ELSE 0 END) AS TR_D_FEE_99
+                      , SUM(CASE WHEN JA_BANK = '0' AND TR_TYPE_CD = '01' THEN TR_CNT ELSE 0 END) AS TR_T_CNT_01
+                      , SUM(CASE WHEN JA_BANK = '0' AND TR_TYPE_CD = '01' THEN TR_AMT ELSE 0 END) AS TR_T_AMT_01
+                      , SUM(CASE WHEN JA_BANK = '0' AND TR_TYPE_CD = '01' THEN TR_FEE ELSE 0 END) AS TR_T_FEE_01
+                      , SUM(CASE WHEN JA_BANK = '0' AND TR_TYPE_CD = '02' THEN TR_CNT ELSE 0 END) AS TR_T_CNT_02
+                      , SUM(CASE WHEN JA_BANK = '0' AND TR_TYPE_CD = '02' THEN TR_AMT ELSE 0 END) AS TR_T_AMT_02
+                      , SUM(CASE WHEN JA_BANK = '0' AND TR_TYPE_CD = '02' THEN TR_FEE ELSE 0 END) AS TR_T_FEE_02
+                      , SUM(CASE WHEN JA_BANK = '0' AND TR_TYPE_CD = '03' THEN TR_CNT ELSE 0 END) AS TR_T_CNT_03
+                      , SUM(CASE WHEN JA_BANK = '0' AND TR_TYPE_CD = '03' THEN TR_AMT ELSE 0 END) AS TR_T_AMT_03
+                      , SUM(CASE WHEN JA_BANK = '0' AND TR_TYPE_CD = '03' THEN TR_FEE ELSE 0 END) AS TR_T_FEE_03
+                      , SUM(CASE WHEN JA_BANK = '0' AND TR_TYPE_CD = '04' THEN TR_CNT ELSE 0 END) AS TR_T_CNT_04
+                      , SUM(CASE WHEN JA_BANK = '0' AND TR_TYPE_CD = '04' THEN TR_AMT ELSE 0 END) AS TR_T_AMT_04
+                      , SUM(CASE WHEN JA_BANK = '0' AND TR_TYPE_CD = '04' THEN TR_FEE ELSE 0 END) AS TR_T_FEE_04
+                      , SUM(CASE WHEN JA_BANK = '0' AND TR_TYPE_CD = '05' THEN TR_CNT ELSE 0 END) AS TR_T_CNT_05
+                      , SUM(CASE WHEN JA_BANK = '0' AND TR_TYPE_CD = '05' THEN TR_AMT ELSE 0 END) AS TR_T_AMT_05
+                      , SUM(CASE WHEN JA_BANK = '0' AND TR_TYPE_CD = '05' THEN TR_FEE ELSE 0 END) AS TR_T_FEE_05
+                      , SUM(CASE WHEN JA_BANK = '0' AND TR_TYPE_CD = '06' THEN TR_CNT ELSE 0 END) AS TR_T_CNT_06
+                      , SUM(CASE WHEN JA_BANK = '0' AND TR_TYPE_CD = '06' THEN TR_AMT ELSE 0 END) AS TR_T_AMT_06
+                      , SUM(CASE WHEN JA_BANK = '0' AND TR_TYPE_CD = '06' THEN TR_FEE ELSE 0 END) AS TR_T_FEE_06
+                      , SUM(CASE WHEN JA_BANK = '0' AND TR_TYPE_CD = '07' THEN TR_CNT ELSE 0 END) AS TR_T_CNT_07
+                      , SUM(CASE WHEN JA_BANK = '0' AND TR_TYPE_CD = '07' THEN TR_AMT ELSE 0 END) AS TR_T_AMT_07
+                      , SUM(CASE WHEN JA_BANK = '0' AND TR_TYPE_CD = '07' THEN TR_FEE ELSE 0 END) AS TR_T_FEE_07
+                      , SUM(CASE WHEN JA_BANK = '0' AND TR_TYPE_CD = '08' THEN TR_CNT ELSE 0 END) AS TR_T_CNT_08
+                      , SUM(CASE WHEN JA_BANK = '0' AND TR_TYPE_CD = '08' THEN TR_AMT ELSE 0 END) AS TR_T_AMT_08
+                      , SUM(CASE WHEN JA_BANK = '0' AND TR_TYPE_CD = '08' THEN TR_FEE ELSE 0 END) AS TR_T_FEE_08
+                      , SUM(CASE WHEN JA_BANK = '0' AND TR_TYPE_CD = '09' THEN TR_CNT ELSE 0 END) AS TR_T_CNT_09
+                      , SUM(CASE WHEN JA_BANK = '0' AND TR_TYPE_CD = '09' THEN TR_AMT ELSE 0 END) AS TR_T_AMT_09
+                      , SUM(CASE WHEN JA_BANK = '0' AND TR_TYPE_CD = '09' THEN TR_FEE ELSE 0 END) AS TR_T_FEE_09
+                      , SUM(CASE WHEN JA_BANK = '0' AND TR_TYPE_CD = '99' THEN TR_CNT ELSE 0 END) AS TR_T_CNT_99
+                      , SUM(CASE WHEN JA_BANK = '0' AND TR_TYPE_CD = '99' THEN TR_AMT ELSE 0 END) AS TR_T_AMT_99
+                      , SUM(CASE WHEN JA_BANK = '0' AND TR_TYPE_CD = '99' THEN TR_FEE ELSE 0 END) AS TR_T_FEE_99
+                   FROM (
+                          SELECT t1.TERM_GROUP_ID
+                               , t1.TERM_ID
+                               , CASE WHEN t1.BANK_CD = #{bankCd} THEN '1' ELSE '0' END AS JA_BANK
+                               , t3.TR_TYPE_CD
+                               , COUNT(*)                       AS TR_CNT
+                               , NVL(SUM(t1.REQUEST_AMOUNT), 0) AS TR_AMT
+                               , NVL(SUM(t1.SURCHARGE), 0)      AS TR_FEE
+                            FROM T_TRANSACTION_JOURNAL t1
+                                 INNER JOIN T_TRANSACTION_CODE t3
+                                         ON TRIM(t1.TR_TYPE) = TRIM(t3.TR_CD)
+                           WHERE t1.JNL_DATE = #{trDate}
+                           GROUP BY t1.TERM_GROUP_ID, t1.TERM_ID
+                                  , CASE WHEN t1.BANK_CD = #{bankCd} THEN '1' ELSE '0' END
+                                  , t3.TR_TYPE_CD
+                        )
+                  GROUP BY TERM_GROUP_ID, TERM_ID
+               ) t ON base.TERM_GROUP_ID = t.TERM_GROUP_ID AND base.TERM_ID = t.TERM_ID
+    </insert>
+
+    <!-- 2. 지역별 상향집계 (AS-IS ins_t_dailyreport02) -->
+    <insert id="insertReport02">
+        INSERT INTO T_DAILY_REPORT02 (
+            BANK_CD, TR_DATE, AREA_CD, ATM_COUNT, CDP_COUNT
+            <include refid="reportBodyCols"/>
+        )
+        SELECT BANK_CD, TR_DATE, AREA_CD
+             , SUM(CASE WHEN ATM_TYPE_CD IN ('1', '4') THEN 1 ELSE 0 END) AS ATM_COUNT
+             , SUM(CASE WHEN ATM_TYPE_CD = '2' THEN 1 ELSE 0 END)         AS CDP_COUNT
+            <include refid="reportBodySums"/>
+          FROM T_DAILY_REPORT01
+        <include refid="rollupWhere"/>
+         GROUP BY BANK_CD, TR_DATE, AREA_CD
+    </insert>
+
+    <!-- 3. 설치장소별 상향집계 (AS-IS ins_t_dailyreport03) -->
+    <insert id="insertReport03">
+        INSERT INTO T_DAILY_REPORT03 (
+            BANK_CD, TR_DATE, LOCATION_TYPE_CD, ATM_COUNT, CDP_COUNT
+            <include refid="reportBodyCols"/>
+        )
+        SELECT BANK_CD, TR_DATE, LOCATION_TYPE_CD
+             , SUM(CASE WHEN ATM_TYPE_CD IN ('1', '4') THEN 1 ELSE 0 END) AS ATM_COUNT
+             , SUM(CASE WHEN ATM_TYPE_CD = '2' THEN 1 ELSE 0 END)         AS CDP_COUNT
+            <include refid="reportBodySums"/>
+          FROM T_DAILY_REPORT01
+        <include refid="rollupWhere"/>
+         GROUP BY BANK_CD, TR_DATE, LOCATION_TYPE_CD
+    </insert>
+
+    <!-- 4. 영업본부별 상향집계 (AS-IS ins_t_dailyreport04) -->
+    <insert id="insertReport04">
+        INSERT INTO T_DAILY_REPORT04 (
+            BANK_CD, TR_DATE, SUPER_ID, ATM_COUNT, CDP_COUNT
+            <include refid="reportBodyCols"/>
+        )
+        SELECT BANK_CD, TR_DATE, SUPER_ID
+             , SUM(CASE WHEN ATM_TYPE_CD IN ('1', '4') THEN 1 ELSE 0 END) AS ATM_COUNT
+             , SUM(CASE WHEN ATM_TYPE_CD = '2' THEN 1 ELSE 0 END)         AS CDP_COUNT
+            <include refid="reportBodySums"/>
+          FROM T_DAILY_REPORT01
+        <include refid="rollupWhere"/>
+         GROUP BY BANK_CD, TR_DATE, SUPER_ID
+    </insert>
+
+    <!-- 5. 기종별 상향집계 (AS-IS ins_t_dailyreport05) -->
+    <insert id="insertReport05">
+        INSERT INTO T_DAILY_REPORT05 (
+            BANK_CD, TR_DATE, ATM_CO_CD, ATM_TYPE_CD, MODEL_CD, INTRODUCE_YEAR,
+            ATM_COUNT, CDP_COUNT
+            <include refid="reportBodyCols"/>
+        )
+        SELECT BANK_CD, TR_DATE, ATM_CO_CD, ATM_TYPE_CD, MODEL_CD, INTRODUCE_YEAR
+             , SUM(CASE WHEN ATM_TYPE_CD IN ('1', '4') THEN 1 ELSE 0 END) AS ATM_COUNT
+             , SUM(CASE WHEN ATM_TYPE_CD = '2' THEN 1 ELSE 0 END)         AS CDP_COUNT
+            <include refid="reportBodySums"/>
+          FROM T_DAILY_REPORT01
+        <include refid="rollupWhere"/>
+         GROUP BY BANK_CD, TR_DATE, ATM_CO_CD, ATM_TYPE_CD, MODEL_CD, INTRODUCE_YEAR
+    </insert>
+
+    <!-- 7. 금고(그룹)별/기종별 상향집계 (AS-IS ins_t_dailyreport07) -->
+    <insert id="insertReport07">
+        INSERT INTO T_DAILY_REPORT07 (
+            BANK_CD, TR_DATE, TERM_GROUP_ID, ATM_CO_CD, ATM_TYPE_CD, MODEL_CD,
+            INTRODUCE_YEAR, ATM_COUNT, CDP_COUNT
+            <include refid="reportBodyCols"/>
+        )
+        SELECT BANK_CD, TR_DATE, TERM_GROUP_ID, ATM_CO_CD, ATM_TYPE_CD, MODEL_CD, INTRODUCE_YEAR
+             , SUM(CASE WHEN ATM_TYPE_CD IN ('1', '4') THEN 1 ELSE 0 END) AS ATM_COUNT
+             , SUM(CASE WHEN ATM_TYPE_CD = '2' THEN 1 ELSE 0 END)         AS CDP_COUNT
+            <include refid="reportBodySums"/>
+          FROM T_DAILY_REPORT01
+        <include refid="rollupWhere"/>
+         GROUP BY BANK_CD, TR_DATE, TERM_GROUP_ID, ATM_CO_CD, ATM_TYPE_CD, MODEL_CD, INTRODUCE_YEAR
+    </insert>
+
+</mapper>

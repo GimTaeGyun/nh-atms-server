@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.nh.atms.web.remotecontrol.mapper.RemoteCommandMapper">
+
+    <resultMap id="rm" type="kr.co.nh.atms.web.remotecontrol.entity.RemoteCommand" autoMapping="true"/>
+
+    <sql id="cols">
+        CMD_ID, TERM_GROUP_ID, TERM_ID, CMD_TYPE, PAYLOAD,
+        STATUS, TIMEOUT_SEC, ASYNC_UID, RESULT_CD, RESULT_DATA, ERR_MSG,
+        REG_USER_ID, ISSUED_AT, ACK_AT, COMPLETED_AT
+    </sql>
+
+    <sql id="where">
+        <where>
+            <if test="termGroupId != null and termGroupId != ''">
+                AND TERM_GROUP_ID = #{termGroupId}
+            </if>
+            <if test="termId != null and termId != ''">
+                AND TERM_ID = #{termId}
+            </if>
+            <if test="cmdType != null and cmdType != ''">
+                AND CMD_TYPE = #{cmdType}
+            </if>
+            <if test="status != null and status != ''">
+                AND STATUS = #{status}
+            </if>
+            <if test="fromDate != null and fromDate != ''">
+                AND ISSUED_AT &gt;= TO_TIMESTAMP(#{fromDate}, 'YYYYMMDD')
+            </if>
+            <if test="toDate != null and toDate != ''">
+                AND ISSUED_AT &lt; TO_TIMESTAMP(#{toDate}, 'YYYYMMDD') + 1
+            </if>
+        </where>
+    </sql>
+
+    <select id="selectList" resultMap="rm">
+        SELECT <include refid="cols"/>
+          FROM T_AGENT_COMMAND
+        <include refid="where"/>
+        ORDER BY ISSUED_AT DESC, CMD_ID DESC
+        OFFSET #{offset} ROWS FETCH NEXT #{limit} ROWS ONLY
+    </select>
+
+    <select id="countList" resultType="long">
+        SELECT COUNT(*) FROM T_AGENT_COMMAND
+        <include refid="where"/>
+    </select>
+
+    <select id="selectOne" resultMap="rm">
+        SELECT <include refid="cols"/>
+          FROM T_AGENT_COMMAND
+         WHERE CMD_ID = #{cmdId}
+    </select>
+
+    <insert id="insert" parameterType="kr.co.nh.atms.web.remotecontrol.entity.RemoteCommand"
+            useGeneratedKeys="false" keyProperty="cmdId">
+        <selectKey keyProperty="cmdId" resultType="string" order="BEFORE">
+            SELECT 'CMD-' || TO_CHAR(SYSDATE, 'YYYYMMDD') || '-'
+                   || LPAD(SEQ_T_AGENT_COMMAND.NEXTVAL, 6, '0')
+              FROM DUAL
+        </selectKey>
+        INSERT INTO T_AGENT_COMMAND (
+            CMD_ID, TERM_GROUP_ID, TERM_ID, CMD_TYPE, PAYLOAD,
+            STATUS, TIMEOUT_SEC, REG_USER_ID, ISSUED_AT
+        ) VALUES (
+            #{cmdId,jdbcType=VARCHAR},
+            #{termGroupId,jdbcType=CHAR},   #{termId,jdbcType=VARCHAR},
+            #{cmdType,jdbcType=VARCHAR},    #{payload,jdbcType=CLOB},
+            'W',                            #{timeoutSec,jdbcType=NUMERIC},
+            #{regUserId,jdbcType=VARCHAR},  CURRENT_TIMESTAMP
+        )
+    </insert>
+
+    <select id="selectByAsyncUid" resultMap="rm">
+        SELECT <include refid="cols"/>
+          FROM T_AGENT_COMMAND
+         WHERE ASYNC_UID = #{asyncUid}
+    </select>
+
+    <update id="updateAfterPush">
+        UPDATE T_AGENT_COMMAND
+           SET STATUS = #{status,jdbcType=VARCHAR},
+               ASYNC_UID = #{asyncUid,jdbcType=NUMERIC},
+               RESULT_CD = #{resultCd,jdbcType=VARCHAR},
+               RESULT_DATA = #{resultData,jdbcType=CLOB},
+               ERR_MSG = #{errMsg,jdbcType=VARCHAR},
+               ACK_AT = CASE WHEN #{status} = 'A' THEN CURRENT_TIMESTAMP ELSE ACK_AT END,
+               COMPLETED_AT = CASE WHEN #{status} IN ('S','F') THEN CURRENT_TIMESTAMP ELSE COMPLETED_AT END
+         WHERE CMD_ID = #{cmdId}
+    </update>
+
+    <update id="updateAsyncResult">
+        UPDATE T_AGENT_COMMAND
+           SET STATUS = #{status,jdbcType=VARCHAR},
+               RESULT_CD = #{resultCd,jdbcType=VARCHAR},
+               RESULT_DATA = #{resultData,jdbcType=CLOB},
+               ERR_MSG = #{errMsg,jdbcType=VARCHAR},
+               COMPLETED_AT = CURRENT_TIMESTAMP
+         WHERE ASYNC_UID = #{asyncUid}
+    </update>
+
+</mapper>

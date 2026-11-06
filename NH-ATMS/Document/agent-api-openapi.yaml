@@ -1,0 +1,691 @@
+openapi: 3.0.3
+info:
+  title: NH-ATMS Agent ↔ Server API
+  description: |
+    NH 자동화기기 종합관리시스템(ATMS) 재구축 프로젝트의
+    ezTAMS Agent ↔ ATMS 서버 간 HTTP 인터페이스 명세.
+
+    **출처**: 새마을금고 `새마을ATM재구축_AGENT_ATM_IF_전체_20251112.txt` 분석 결과
+    + RFP "운영기기 ↔ 서버 HTTP 통신" 요건 반영.
+
+    - ATM AP ↔ Agent 통신은 로컬 TCP 소켓 (별도 명세)
+    - 본 명세는 Agent (ATM 단말 측) ↔ ATMS 서버 (관제센터)
+  version: 0.1.0
+  contact:
+    name: NH-ATMS PL
+servers:
+  - url: https://atms.nh.local
+    description: 운영
+  - url: http://localhost:8081
+    description: atms-journal (로컬 개발)
+
+tags:
+  - name: agent-lifecycle
+    description: 에이전트 등록/하트비트 (Agent → Server)
+  - name: journal
+    description: 저널 수신 7종 (Agent → Server)
+  - name: file
+    description: 파일 업로드 (Agent → Server)
+  - name: notify
+    description: 통보 (Agent → Server)
+  - name: command
+    description: 명령 큐 (Server → Agent, 폴링)
+
+security:
+  - mutualTLS: []
+  - bearerAuth: []
+
+components:
+  securitySchemes:
+    mutualTLS:
+      type: mutualTLS
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    ApiResponse:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          example: "0000"
+        message:
+          type: string
+          example: "성공"
+        data:
+          type: object
+          nullable: true
+
+    AtmId:
+      type: string
+      pattern: '^[0-9]{8}$'
+      description: "금고번호(5) + 단말번호(3)"
+      example: "12345001"
+
+    JournalMode:
+      type: integer
+      enum: [0, 1, 2, 3]
+      description: |
+        0=None(중지), 1=전자저널, 2=종이+전자, 3=종이저널
+
+    AgentRegisterRequest:
+      type: object
+      required: [atmId, atmType, agentVersion, ip, os]
+      properties:
+        atmId: { $ref: '#/components/schemas/AtmId' }
+        atmType: { type: string, example: "HYOSUNG_8000T" }
+        agentVersion: { type: string, example: "2.3.5" }
+        ip: { type: string, example: "10.10.20.31" }
+        os: { type: string, example: "Windows 10 IoT LTSC" }
+        cpu: { type: string }
+        memory: { type: string }
+        hdd1Size: { type: integer }
+        hdd1Used: { type: integer }
+        jnlmode: { $ref: '#/components/schemas/JournalMode' }
+        machineNo: { type: string }
+        barcodeNo: { type: string }
+
+    HeartbeatRequest:
+      type: object
+      required: [atmId, occurredAt]
+      properties:
+        atmId: { $ref: '#/components/schemas/AtmId' }
+        occurredAt: { type: string, format: date-time }
+        sessionAlive: { type: boolean }
+
+    DeviceStatus:
+      type: object
+      description: |
+        Device Status Code (32B 가까운 구조).
+        키: 1=명세표, 2=저널, 3=통장, 4=A4프린터, 5=스캐너, 7=현금출금,
+            8=동전출금, 9=수표출금, A=핀패드, D=Text표시, E=센서, F=업체전용,
+            H=알람, P=지시램프, Q=안내램프, R=배터리, S=안내램프2,
+            T=카드도난방지, U=캐비닛, J=지폐입금, N=수표입금
+        값: 8B 고정 (Device/Media/Shutter/Dispenser/Retract/Bin/Ink/Toner 등)
+      additionalProperties:
+        type: string
+        minLength: 8
+        maxLength: 8
+      example:
+        "1": "30000000"
+        "7": "30303030"
+        "9": "31000000"
+
+    AtmStatusRequest:
+      type: object
+      required: [atmId, occurredAt, deviceStatus]
+      properties:
+        atmId: { $ref: '#/components/schemas/AtmId' }
+        occurredAt: { type: string, format: date-time }
+        deviceStatus: { $ref: '#/components/schemas/DeviceStatus' }
+        appStatus: { type: string, description: "거래중/계원모드/사용중지/대기" }
+
+    JournalHeader:
+      type: object
+      required: [atmId, jnlType, occurredAt, seq]
+      properties:
+        atmId: { $ref: '#/components/schemas/AtmId' }
+        jnlType:
+          type: integer
+          enum: [11, 12, 21, 22, 31, 41]
+          description: "11=APStart, 12=개국, 21=상태, 22=장애, 31=마감, 41=시재"
+        occurredAt:
+          type: string
+          format: date-time
+          example: "2026-05-14T06:30:10.123+09:00"
+        seq:
+          type: integer
+          minimum: 0
+          maximum: 9
+          description: "동시구분 Flag (같은 시각 발생 시 0,1,2,…)"
+
+    JournalApStart:
+      allOf:
+        - $ref: '#/components/schemas/JournalHeader'
+        - type: object
+          properties:
+            startedAt: { type: string, format: date-time }
+            apVersion: { type: string }
+
+    JournalOpen:
+      allOf:
+        - $ref: '#/components/schemas/JournalHeader'
+        - type: object
+          required: [ip, os, cpuInfo, memory]
+          properties:
+            ip: { type: string }
+            os: { type: string }
+            cpuInfo: { type: string }
+            memory: { type: string }
+            hdd1Size: { type: integer }
+            hdd1Used: { type: integer }
+            hdd2Size: { type: integer }
+            hdd2Used: { type: integer }
+            cardStatus:
+              type: integer
+              enum: [0, 1, 2, 3]
+              description: "0=미장착, 1=장착&사용불가(H/W초기화 NG), 1C=Key교환오류, 3=장착&사용가능"
+            checkStatus:
+              type: integer
+              enum: [0, 1]
+              description: "0=미장착, 1=장착&사용불가능"
+            encMode:
+              type: string
+              enum: ["0", "A", "E"]
+              description: "0=암호화안됨, A=자체+SEED, E=자체암호화"
+            withdrawableNotes:
+              type: string
+              description: "출금가능 권종 (예: 1만/5만)"
+
+    JournalStatus:
+      allOf:
+        - $ref: '#/components/schemas/JournalHeader'
+        - type: object
+          properties:
+            statusCode: { type: string }
+            faultCode: { type: string }
+            deviceId: { type: string }
+            faultDetail: { type: string }
+            txInfo:
+              type: object
+              description: "거래중 장애 시 전 거래정보 필수"
+              properties:
+                txSeq: { type: string }
+                cardNo: { type: string }
+                amount: { type: integer }
+                noteInfo:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      denomination: { type: integer, example: 10000 }
+                      count: { type: integer }
+
+    JournalTotal:
+      allOf:
+        - $ref: '#/components/schemas/JournalHeader'
+        - type: object
+          properties:
+            totalType:
+              type: string
+              description: "합계/소계/마감 후 구분"
+            hostTotalCount: { type: integer }
+            hostTotals:
+              type: array
+              items:
+                type: object
+                properties:
+                  subnameCode: { type: string }
+                  value: { type: string }
+            atmTotalCount: { type: integer }
+            atmTotals:
+              type: array
+              items:
+                type: object
+                properties:
+                  subnameCode: { type: string }
+                  value: { type: string }
+
+    JournalBalance:
+      allOf:
+        - $ref: '#/components/schemas/JournalHeader'
+        - type: object
+          properties:
+            checkDenoms:
+              type: array
+              description: "수표 권종 정보"
+              items:
+                type: object
+                properties:
+                  denomination: { type: integer, example: 100000 }
+                  registerCount: { type: integer }
+            cashDenoms:
+              type: array
+              description: "현금 권종 정보 (실 보충/회수만)"
+              items:
+                type: object
+                properties:
+                  denomination: { type: integer, example: 10000 }
+                  refillCount: { type: integer }
+                  retractCount: { type: integer }
+                  logicalCassettes: { type: integer }
+                  physicalCassettes: { type: integer }
+
+    DenominationDetail:
+      type: object
+      description: "입/출금 지폐 권종별 상세 (Field 41~47, 88필드 중 가변)"
+      properties:
+        currencyCode: { type: string, maxLength: 3, example: "KWR" }
+        denominationCode: { type: string, maxLength: 10, example: "10000" }
+        countInTransaction: { type: integer, maxLength: 5 }
+
+    CheckDetail:
+      type: object
+      description: "입/출금 수표 상세 (Field 49~55)"
+      properties:
+        amount: { type: integer, description: "수표 금액 (max15)" }
+        bankCode: { type: string, maxLength: 4 }
+        number: { type: string, maxLength: 32, description: "수표번호" }
+
+    LogicalCassette:
+      type: object
+      description: "권종별 Logical 카세트 (Field 57~65)"
+      properties:
+        currency: { type: string, maxLength: 3, example: "KWR" }
+        denomination: { type: string, maxLength: 10 }
+        billCount: { type: integer, maxLength: 5 }
+        status: { type: string, maxLength: 2, description: "카세트 상태 코드" }
+
+    PhysicalCassette:
+      type: object
+      description: "물리적 카세트 (Field 67~77)"
+      properties:
+        cassetteNo: { type: string, maxLength: 2 }
+        currency: { type: string, maxLength: 3, example: "KWR" }
+        denomination: { type: string, maxLength: 10 }
+        billCount: { type: integer, maxLength: 5 }
+        status: { type: string, maxLength: 2 }
+
+    AtmCheckDeno:
+      type: object
+      description: "ATM 출금 수표 (Field 79~87)"
+      properties:
+        denominationCode: { type: string, maxLength: 10 }
+        currencyCode: { type: string, maxLength: 3, example: "KWR" }
+        countTotal: { type: integer, maxLength: 5 }
+        checkInformation: { type: string, maxLength: 32, description: "수표 정보, 수표 시작번호" }
+
+    JournalTransaction:
+      allOf:
+        - $ref: '#/components/schemas/JournalHeader'
+        - type: object
+          description: |
+            거래 저널 (3.3.7) — 88 필드 전체 매핑.
+            새마을금고 거래코드(2번)는 별도 코드표 참조.
+          properties:
+            transactionNumber: { type: integer, description: "ATM 거래 일련번호 (max4)" }
+            transactionCode: { type: string, maxLength: 6, description: "거래코드 (코드표 참조)" }
+            bankCode: { type: string, maxLength: 4, description: "거래 매체 은행코드" }
+            bankAccount: { type: string, maxLength: 32, description: "거래 매체 계좌/카드 번호" }
+            transferBankCode: { type: string, maxLength: 4, description: "이체 대상 은행코드" }
+            transferAccount: { type: string, maxLength: 32, description: "이체 대상 계좌번호" }
+            hostDateTime:
+              type: string
+              format: date-time
+              description: "Host 거래 일시 (Field 9~14: month,day,year,hour,min,sec 합성)"
+            hostRetrievalNumber: { type: string, maxLength: 8, description: "호스트 인증번호(일련번호)" }
+            hostTraceAuditNumber: { type: string, maxLength: 8 }
+            hostNetId: { type: string, maxLength: 8 }
+            depositNumber: { type: string, maxLength: 8 }
+            chargeAmount: { type: integer, description: "거래 수수료 (max15)" }
+            requestAmount: { type: integer, description: "요청 금액 (max15)" }
+            transactionAmount: { type: integer, description: "거래 금액 (max15)" }
+            remainAmount: { type: integer, description: "잔액(전체) (max15)" }
+            availableAmount: { type: integer, description: "잔액(출금가능) (max15)" }
+            procCount: { type: integer, maxLength: 1, description: "진행 카운트" }
+            transactionResult: { type: string, maxLength: 6, description: "Host 거래결과 코드" }
+            errorCode1: { type: string, maxLength: 10, description: "장애코드 1" }
+            errorCode2: { type: string, maxLength: 10, description: "장애코드 2" }
+            errorCode3: { type: string, maxLength: 10, description: "장애코드 3" }
+            msData: { type: string, maxLength: 104, description: "카드/통장 MS 데이터" }
+            hostMessage: { type: string, maxLength: 64 }
+            mediaId: { type: string, maxLength: 1, description: "매체 구분 (코드표)" }
+            settleDivision:
+              type: string
+              enum: ["1", "2"]
+              description: "마감 전/후 구분 (1=마감전, 2=마감후)"
+            hostCashAmount: { type: integer, description: "Host 현금 시재 잔액" }
+            hostCheckAmount: { type: integer, description: "Host 수표 시재 잔액" }
+            denominationDetails:
+              type: array
+              description: "입/출금 거래 시 지폐 권종별 (Field 40~47)"
+              items: { $ref: '#/components/schemas/DenominationDetail' }
+            checkDetails:
+              type: array
+              description: "입/출금 수표 (Field 48~55)"
+              items: { $ref: '#/components/schemas/CheckDetail' }
+            logicalCassettes:
+              type: array
+              description: "Logical 카세트 (권종별, Field 56~65)"
+              items: { $ref: '#/components/schemas/LogicalCassette' }
+            physicalCassettes:
+              type: array
+              description: "물리적 카세트 (Field 66~77)"
+              items: { $ref: '#/components/schemas/PhysicalCassette' }
+            atmCheckDenos:
+              type: array
+              description: "ATM 출금 수표 권종 (Field 78~87)"
+              items: { $ref: '#/components/schemas/AtmCheckDeno' }
+            customerName: { type: string, maxLength: 20, description: "이체(송금)/입금 시 대상 고객명" }
+            nonCashValue: { type: string, maxLength: 16, description: "미사용 (||)" }
+            nonCashType: { type: string, maxLength: 2, description: "미사용 (||)" }
+
+    JournalModeNotify:
+      type: object
+      required: [atmId, jnlmode, reason, occurredAt]
+      properties:
+        atmId: { $ref: '#/components/schemas/AtmId' }
+        jnlmode: { $ref: '#/components/schemas/JournalMode' }
+        reason:
+          type: string
+          enum: [HDD_FULL, WRITE_ERROR, MANUAL, REMOTE_CMD]
+        occurredAt: { type: string, format: date-time }
+
+    DownloadResultNotify:
+      type: object
+      required: [atmId, fileName, version, success, occurredAt]
+      properties:
+        atmId: { $ref: '#/components/schemas/AtmId' }
+        fileName: { type: string }
+        version: { type: string }
+        success: { type: boolean }
+        errorMessage: { type: string }
+        occurredAt: { type: string, format: date-time }
+
+    Command:
+      type: object
+      required: [cmdId, type, atmId, issuedAt]
+      properties:
+        cmdId: { type: string, example: "CMD-20260514-000001" }
+        type:
+          type: string
+          enum:
+            - STAT
+            - IMGC
+            - DLD
+            - FCOL
+            - RST
+            - RBT
+            - POFF
+            - STOP
+            - OPEN_OP
+            - JMOD
+            - MSG
+            - TMOD
+            - CLS
+            - RCMD
+            - GDL
+        atmId: { $ref: '#/components/schemas/AtmId' }
+        payload:
+          type: object
+          additionalProperties: true
+        issuedAt: { type: string, format: date-time }
+        timeoutSec: { type: integer, default: 180 }
+
+    CommandList:
+      type: object
+      properties:
+        commands:
+          type: array
+          items: { $ref: '#/components/schemas/Command' }
+
+    CommandResult:
+      type: object
+      required: [cmdId, success, completedAt]
+      properties:
+        cmdId: { type: string }
+        success: { type: boolean }
+        resultCode: { type: string, description: "0x30=성공, 그 외=실패" }
+        resultData:
+          type: object
+          additionalProperties: true
+        errorMessage: { type: string }
+        completedAt: { type: string, format: date-time }
+
+paths:
+  # ─────────────────────────────── Agent → Server
+  /api/agent/register:
+    post:
+      tags: [agent-lifecycle]
+      summary: "에이전트 등록 (Agent 기동 직후 1회)"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AgentRegisterRequest' }
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+
+  /api/agent/heartbeat:
+    post:
+      tags: [agent-lifecycle]
+      summary: "하트비트 (600초 주기)"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/HeartbeatRequest' }
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+
+  /api/agent/status:
+    post:
+      tags: [agent-lifecycle]
+      summary: "ATM 상태 통보 (STAT 명령 결과 또는 자발 통보)"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AtmStatusRequest' }
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+
+  /api/journal/recv/ap-start:
+    post:
+      tags: [journal]
+      summary: "AP Start 저널 (11)"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/JournalApStart' }
+      responses:
+        '200': { description: 성공, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+
+  /api/journal/recv/open:
+    post:
+      tags: [journal]
+      summary: "개국 저널 (12)"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/JournalOpen' }
+      responses:
+        '200': { description: 성공, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+
+  /api/journal/recv/status:
+    post:
+      tags: [journal]
+      summary: "상태/장애 저널 (21/22)"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/JournalStatus' }
+      responses:
+        '200': { description: 성공, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+
+  /api/journal/recv/total:
+    post:
+      tags: [journal]
+      summary: "마감 저널 (31)"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/JournalTotal' }
+      responses:
+        '200': { description: 성공, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+
+  /api/journal/recv/balance:
+    post:
+      tags: [journal]
+      summary: "시재 저널 (41)"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/JournalBalance' }
+      responses:
+        '200': { description: 성공, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+
+  /api/journal/recv/transaction:
+    post:
+      tags: [journal]
+      summary: "거래 저널 (R21 포맷 미확정)"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/JournalTransaction' }
+      responses:
+        '200': { description: 성공, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+
+  /api/file/upload/journal:
+    post:
+      tags: [file]
+      summary: "저널 IDX/TXT/IMG 파일 업로드"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [atmId, fileType, fileDate, file]
+              properties:
+                atmId: { $ref: '#/components/schemas/AtmId' }
+                fileType:
+                  type: string
+                  enum: [HDX, IDX_STA, IDX_TRA, IDX_BAL, IDX_TOT, IDX_OPA, TXT, IMG]
+                fileDate: { type: string, example: "20260514" }
+                compressed: { type: boolean }
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200': { description: 성공, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+
+  /api/file/upload/log:
+    post:
+      tags: [file]
+      summary: "AP/Agent 로그 업로드 (FCOL 명령)"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [atmId, logType, logDate, file]
+              properties:
+                atmId: { $ref: '#/components/schemas/AtmId' }
+                logType:
+                  type: string
+                  enum: [AP_LOG, AGENT_LOG, GIRO_IMAGE]
+                logDate: { type: string, example: "20260514" }
+                compressed: { type: boolean }
+                file: { type: string, format: binary }
+      responses:
+        '200': { description: 성공, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+
+  /api/agent/notify/journal-mode:
+    post:
+      tags: [notify]
+      summary: "저널 모드 변경 통보 (2.3.11)"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/JournalModeNotify' }
+      responses:
+        '200': { description: 성공, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+
+  /api/agent/notify/download-result:
+    post:
+      tags: [notify]
+      summary: "다운로드 결과 통보"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DownloadResultNotify' }
+      responses:
+        '200': { description: 성공, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+
+  # ─────────────────────────────── Server → Agent (폴링 방식)
+  /api/agent/{atmId}/commands:
+    get:
+      tags: [command]
+      summary: "대기 명령 큐 조회 (Agent 폴링)"
+      parameters:
+        - name: atmId
+          in: path
+          required: true
+          schema: { $ref: '#/components/schemas/AtmId' }
+        - name: max
+          in: query
+          schema: { type: integer, default: 10 }
+      responses:
+        '200':
+          description: "대기 명령 목록"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CommandList' }
+
+  /api/agent/{atmId}/command/{cmdId}/ack:
+    post:
+      tags: [command]
+      summary: "명령 수령 확인"
+      parameters:
+        - { name: atmId, in: path, required: true, schema: { $ref: '#/components/schemas/AtmId' } }
+        - { name: cmdId, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: 성공, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+
+  /api/agent/{atmId}/command/{cmdId}/result:
+    post:
+      tags: [command]
+      summary: "명령 실행 결과 통보"
+      parameters:
+        - { name: atmId, in: path, required: true, schema: { $ref: '#/components/schemas/AtmId' } }
+        - { name: cmdId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CommandResult' }
+      responses:
+        '200': { description: 성공, content: { application/json: { schema: { $ref: '#/components/schemas/ApiResponse' } } } }
+
+  /api/file/download/{atmId}/{fileName}:
+    get:
+      tags: [file]
+      summary: "ATM 다운로드 파일 제공 (개별/일괄/일반 다운로드 시 Agent가 호출)"
+      parameters:
+        - { name: atmId, in: path, required: true, schema: { $ref: '#/components/schemas/AtmId' } }
+        - { name: fileName, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: "파일 binary"
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
+          headers:
+            X-Checksum-SHA256:
+              schema: { type: string }
+              description: "파일 무결성 검증용"

@@ -1,0 +1,61 @@
+# =====================================================================
+# JEUS(은행 개발서버 nbatmsltws01) 공통 설정
+#  - 모든 모듈의 application-jeus.yml 이 spring.config.import 로 읽는다 (atms-common jar 안에 포함)
+#  - 활성화: WAR 의 WEB-INF/web.xml 이 spring.profiles.active=jeus 지정 (빌드: ./gradlew bootWar -Pjeus)
+#  - 우선순위: 이 파일 > 각 모듈 application-jeus.yml > application.yml
+#  - JVM 옵션(-Djeus.host=... 등)이나 OS 환경변수로 지정하면 이 파일 값보다 우선한다
+#
+#  ※ CHANGE_ME 항목(JWT 시크릿·WebtoB 주소·L4 VIP)은 "내부망 소스(Gitea)" 에서만 실제 값으로 바꾼다.
+#    외부(GitHub 등)에 실제 JWT 시크릿을 push 하지 않는다. DB 는 JNDI 라 이 파일에 비밀번호가 없다.
+# =====================================================================
+
+jeus:
+  # 2026-10-26 결정: 도메인 1개 + 매니지드 서버 6개 (모듈마다 JVM 하나, 포트 8080~8085, 컨텍스트 '/')
+  #   업체 원본 멀티모듈과 같은 배치 → 모듈 간 호출은 각 서버의 HTTP 리스너로 직접 (게이트웨이 없음)
+  #   리스너는 16.88.122.113 에서 LISTEN 해야 함 (127.0.0.1 만 열면 모듈 간 호출 실패 — 2026-10-23 8766 사례)
+  host: 16.88.122.113
+  url:
+    web:     http://${jeus.host}:8080   # atms01  (atms-web)
+    journal: http://${jeus.host}:8081   # ajou01 (atms-journal)
+    batch:   http://${jeus.host}:8082   # abat01   (atms-batch)
+    file:    http://${jeus.host}:8083   # file01    (atms-file)
+    ifin:    http://${jeus.host}:8084   # ifin01    (atms-if-internal)
+    ifex:    http://${jeus.host}:8085   # ifex01    (atms-if-external)
+  # 앱 로그 폴더 (6개 서버 공용, 파일 이름은 모듈별. JEUS 실행 계정 jeusatms 가 쓰기 가능해야 함)
+  log-dir: /WASlogs/jeusATMSlogs/nbatmsltws01/app
+  # 업로드·이미지·다운로드 저장소 (jeusatms 쓰기 가능, web·file 모듈이 공유)
+  data-dir: /home/atmswas/data
+  # ATM·STM·공과금수납기 에이전트가 접속할 입구 (에이전트 open 응답에 내려감)
+  # 2026-10-27 확정 구성: 에이전트 → 내부망 L4 → ws01 직접 (WebtoB 를 거치지 않음)
+  #   저널 REST → ajou01 :8081, 파일 REST → file01 :8083, 파일 TCP 소켓 → file01 :21001, http (개발서버)
+  agent-entry:
+    host: CHANGE_ME_L4_VIP         # L4 VIP 확정 후 기입 (L4 가 16.88.122.113 의 8081·8083·21001 로 분산)
+    journal-port: 8081
+    file-port: 8083
+    schema: http
+
+spring:
+  datasource:
+    # 2026-11-02: JEUS 데이터소스(JNDI) 사용 — DB 주소·계정·비밀번호는 JEUS(WAS 담당)에만 있고 WAR 에는 없다
+    #   데이터소스: nbatmsltdb01_NBATMSTP (16.88.250.91:1531, 계정 ATMS_APP), JNDI 이름 dsATMS01, ws01 서버 6개 대상
+    #   jndi-name 이 있으면 Spring Boot 는 자체 커넥션 풀(Hikari)을 만들지 않고 JEUS 풀을 찾아 쓴다
+    #   찾는 순서: java:comp/env/dsATMS01 → dsATMS01 (Spring XML 의 resource-ref="true" 와 같은 동작)
+    #   각 모듈 application.yml 의 url·hikari 값은 이 프로파일에서는 쓰이지 않는다 (풀 크기는 JEUS 데이터소스 설정)
+    jndi-name: dsATMS01
+
+# 6개 모듈 모두 같은 값이어야 함 (atms-web 이 발급한 토큰을 다른 모듈이 검증). 32바이트 이상
+jwt:
+  secret: CHANGE_ME_JWT_SECRET_AT_LEAST_32_BYTES_LONG
+
+# 화면은 WebtoB 를 통해 같은 주소로 들어오므로 보통 불필요. 직접 접근 시를 위해 WebtoB 주소 지정
+cors:
+  allowed-origins: "http://CHANGE_ME_WEBTOB_HOST:9000"
+
+logging:
+  level:
+    kr.co.nh.atms: INFO
+  logback:
+    rollingpolicy:
+      max-file-size: 100MB
+      max-history: 30
+      total-size-cap: 3GB

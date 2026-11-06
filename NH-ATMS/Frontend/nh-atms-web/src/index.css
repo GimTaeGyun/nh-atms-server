@@ -1,0 +1,128 @@
+@import url('https://cdn.jsdelivr.net/npm/pretendard/dist/web/static/pretendard.css');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 13px;
+  color: #333;
+  background: #f4f6f9;
+}
+
+/* Ant Design 오버라이드 */
+
+.ant-table {
+  font-size: 13px;
+}
+
+/* 테이블 헤더 — 네이비 테마 */
+.ant-table-thead > tr > th {
+  background: #132744 !important;
+  color: #fff !important;
+  font-weight: 600;
+  text-align: center !important;
+  padding: 8px 12px !important;
+  border-right: 1px solid #1a3a5c !important;
+}
+
+.ant-table-tbody > tr > td {
+  padding: 6px 12px !important;
+  border-bottom: 1px solid #e8e8e8;
+}
+
+.ant-table-tbody > tr:hover > td {
+  background: #e6f0ff !important;
+}
+
+/* 조회조건 패널 */
+.search-panel {
+  background: #f8f9fb;
+  border: 1px solid #d9dde4;
+  border-radius: 4px;
+  padding: 12px 16px;
+  margin-bottom: 12px;
+}
+
+.search-panel .ant-form-item {
+  margin-bottom: 0;
+}
+
+/* ===== 탭 바 (다크 테마) ===== */
+.menu-tabs .ant-tabs-nav {
+  margin-bottom: 0;
+}
+
+.menu-tabs .ant-tabs-nav::before {
+  border-bottom: none !important;
+}
+
+.menu-tabs .ant-tabs-tab {
+  padding: 6px 16px !important;
+  font-size: 12px;
+  color: rgba(255,255,255,0.6) !important;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 6px 6px 0 0 !important;
+  margin: 0 2px !important;
+  transition: all 0.2s;
+}
+
+.menu-tabs .ant-tabs-tab:hover {
+  color: rgba(255,255,255,0.9) !important;
+}
+
+.menu-tabs .ant-tabs-tab-active {
+  background: rgba(255,255,255,0.12) !important;
+  color: #fff !important;
+  border-bottom: none !important;
+}
+
+.menu-tabs .ant-tabs-tab-active .ant-tabs-tab-btn {
+  color: #fff !important;
+}
+
+.menu-tabs .ant-tabs-tab-remove {
+  color: rgba(255,255,255,0.4) !important;
+}
+
+.menu-tabs .ant-tabs-tab-remove:hover {
+  color: #fff !important;
+}
+
+/* 탭 추가 버튼 숨김 (hideAdd 사용 중) */
+.menu-tabs .ant-tabs-nav-add {
+  display: none;
+}
+
+/* ===== 사이드바 메뉴 (다크 테마) ===== */
+.sidebar-menu.ant-menu-dark {
+  background: transparent !important;
+}
+
+.sidebar-menu.ant-menu-dark .ant-menu-sub {
+  background: rgba(0,0,0,0.15) !important;
+}
+
+.sidebar-menu.ant-menu-dark .ant-menu-item-selected {
+  background: rgba(26,58,92,0.6) !important;
+}
+
+/* 현재 메뉴명 */
+.current-menu-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #132744;
+  padding: 8px 0;
+  margin-bottom: 8px;
+  border-bottom: 2px solid #132744;
+}
+
+/* 로그인 폼 placeholder */
+.ant-input::placeholder,
+.ant-input-password .ant-input::placeholder {
+  color: rgba(255,255,255,0.35) !important;
+}

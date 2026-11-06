@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.nh.atms.journal.mapper.AtmStopHistoryWriteMapper">
+
+    <!-- 운영중지 장애 1건 적재 (PK 중복 시 무시) -->
+    <insert id="insertStop">
+        INSERT /*+ IGNORE_ROW_ON_DUPKEY_INDEX(T_ATM_STOP_HISTORY, PK_T_ATM_STOP_HISTORY) */
+          INTO T_ATM_STOP_HISTORY (
+            TERM_GROUP_ID, TERM_ID, JNL_DATE, JNL_TIME, ERR_GROUP_CD,
+            DEVICE_ID, FAULT_STATUS, EXCEPT_FLAG
+        ) VALUES (
+            #{termGroupId,jdbcType=CHAR}, #{termId,jdbcType=VARCHAR},
+            #{jnlDate,jdbcType=CHAR}, #{jnlTime,jdbcType=CHAR}, #{errGroupCd,jdbcType=CHAR},
+            #{deviceId,jdbcType=CHAR}, #{faultStatus,jdbcType=CHAR}, #{exceptFlag,jdbcType=CHAR}
+        )
+    </insert>
+
+    <!-- 정상복구 - 미완료(FINISHED_DATE IS NULL) 중지건의 조치완료일시 채움 -->
+    <update id="recover">
+        UPDATE T_ATM_STOP_HISTORY
+           SET FINISHED_DATE = #{finishedDate,jdbcType=CHAR},
+               FINISHED_TIME = #{finishedTime,jdbcType=CHAR}
+         WHERE TERM_GROUP_ID = #{termGroupId,jdbcType=CHAR}
+           AND TERM_ID       = #{termId,jdbcType=VARCHAR}
+           AND FINISHED_DATE IS NULL
+    </update>
+
+</mapper>

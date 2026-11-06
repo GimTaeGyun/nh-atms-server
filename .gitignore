@@ -1,0 +1,48 @@
+# ---- 배포킷 런타임/민감정보 (저장소 루트 기준으로만 제외) ----
+/conf/*.env
+/conf/apps/*.env
+/config/
+/logs/
+/release/
+/build/
+/images/
+/jdk/
+/run/
+/inbox/
+/infra/
+/backup/
+/tools/
+/frontend/
+
+# ---- 소스(NH-ATMS) 공통 ----
+# 빌드 산출물 / IDE
+build/
+out/
+target/
+.gradle/
+.idea/
+*.iml
+.vscode/
+node_modules/
+dist/
+# 민감정보
+.env
+.env.*
+!.env.example
+# 바이너리 / 대용량
+*.jar
+!**/gradle/wrapper/gradle-wrapper.jar
+*.war
+*.zip
+*.7z
+*.tar
+*.tar.gz
+*.tgz
+*.log
+
+# .NET build output / executables
+*.exe
+**/publish/
+obj/
+NH-ATMS/**/bin/Debug/
+NH-ATMS/**/bin/Release/

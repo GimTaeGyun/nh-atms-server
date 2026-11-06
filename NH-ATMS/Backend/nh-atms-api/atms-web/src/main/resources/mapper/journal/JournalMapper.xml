@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.nh.atms.web.journal.mapper.JournalMapper">
+
+    <resultMap id="rm" type="kr.co.nh.atms.web.journal.entity.Journal" autoMapping="true"/>
+
+    <sql id="cols">
+        TERM_GROUP_ID, TERM_ID, JNL_DATE, JNL_TIME,
+        AGENT_TYPE, SEQ_NO, JNL_TYPE_CD, JNL_WRITE_TYPE_CD,
+        RECV_DATE, RECV_TIME
+    </sql>
+
+    <sql id="where">
+        <where>
+            <if test="termGroupId != null and termGroupId != ''">
+                AND TERM_GROUP_ID = #{termGroupId}
+            </if>
+            <if test="termId != null and termId != ''">
+                AND TERM_ID = #{termId}
+            </if>
+            <if test="jnlTypeCd != null and jnlTypeCd != ''">
+                AND JNL_TYPE_CD = #{jnlTypeCd}
+            </if>
+            <if test="fromDate != null and fromDate != ''">
+                AND JNL_DATE &gt;= #{fromDate}
+            </if>
+            <if test="toDate != null and toDate != ''">
+                AND JNL_DATE &lt;= #{toDate}
+            </if>
+        </where>
+    </sql>
+
+    <select id="selectList" resultMap="rm">
+        SELECT <include refid="cols"/>
+          FROM T_JOURNAL
+        <include refid="where"/>
+        ORDER BY JNL_DATE DESC, JNL_TIME DESC
+        OFFSET #{offset} ROWS FETCH NEXT #{limit} ROWS ONLY
+    </select>
+
+    <select id="countList" resultType="long">
+        SELECT COUNT(*) FROM T_JOURNAL
+        <include refid="where"/>
+    </select>
+
+    <select id="selectOne" resultMap="rm">
+        SELECT <include refid="cols"/>
+          FROM T_JOURNAL
+         WHERE TERM_GROUP_ID = #{termGroupId}
+           AND TERM_ID       = #{termId}
+           AND JNL_DATE      = #{jnlDate}
+           AND JNL_TIME      = #{jnlTime}
+    </select>
+
+</mapper>

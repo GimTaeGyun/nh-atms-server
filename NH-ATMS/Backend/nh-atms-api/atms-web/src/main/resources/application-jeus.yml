@@ -1,0 +1,46 @@
+# =====================================================================
+# atms-web — JEUS 배포 (서버 atms01 :8080, 컨텍스트 '/')
+# 2026-10-26: 매니지드 서버 6개 구성 — WebtoB 가 경로별로 각 모듈 서버에 직접 분배하므로 게이트웨이는 끈다
+# 공통값(DB·JWT·주소)은 atms-common 의 jeus-common.yml
+# =====================================================================
+spring:
+  config:
+    import: classpath:jeus-common.yml
+
+logging:
+  file:
+    name: ${jeus.log-dir}/atms-web.log
+
+# 레거시 에이전트 .do 경로(/atms/agent, /atmr/agent, /atms/remote-exec) → atms-journal
+agent:
+  proxy:
+    journal-base-url: ${jeus.url.journal}
+
+# 원격제어 전문 송신 → atms-file
+atmf:
+  remote:
+    snd-msg-uri: ${jeus.url.file}/atmf/snd.msg.do
+
+notice:
+  upload-dir: ${jeus.data-dir}/uploads/notice
+
+download:
+  storage:
+    base-dir: ${jeus.data-dir}/atms-download
+
+# 모듈 경로(/api/journal, /api/batch, /api/file, /atmf, /api/if/...) 는 WebtoB http.m 의 *URI 가
+# 해당 서버로 바로 보낸다 (deploy/webtob/http.m.atms-jsv.txt) → atms-web 이 전달하지 않음
+gateway:
+  enabled: false
+
+# 화면↔서버 민감필드(비밀번호) 암호화 — docs/FIELD_ENCRYPTION_DESIGN.md
+# 키 파일은 WAR 밖 /home/atmswas/keys (jeus 그룹 640, 같은 파일을 ws02 에도). 없으면 기동 실패한다.
+# required: 화면 배포 확인 후 true (그 전까지는 평문도 받음)
+crypto:
+  field:
+    enabled: true
+    required: false
+    kid: k202611
+    private-key-path: /home/atmswas/keys/field-k202611.key.pem
+    public-key-path: /home/atmswas/keys/field-k202611.pub.pem
+    max-skew-seconds: 120

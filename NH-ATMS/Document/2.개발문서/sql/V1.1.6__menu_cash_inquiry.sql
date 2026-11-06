@@ -1,0 +1,37 @@
+-- =====================================================================
+-- V1.1.6 : 기기시재조회 메뉴 추가 (T_ADD_CASH 실연동)
+--   - 2060 기기시재조회 (/cash) ← T_ADD_CASH 카세트별 최신 시재
+-- 참조: V1.1.5 (ATM 운영 그룹 2040/2050)
+-- =====================================================================
+
+INSERT INTO T_MENU (MENU_NO, PARENT_NO, MENU_NAME, MENU_URL, MENU_LEVEL, MENU_ORDER, MENU_ICON)
+VALUES (2060, 2000, '기기시재조회', '/cash', 2, 6, NULL);
+
+INSERT INTO T_AUTH_MENU (AUTH_CODE, MENU_NO, READ_YN, WRITE_YN)
+SELECT 'ROLE_ADMIN', MENU_NO, 'Y', 'Y'
+  FROM T_MENU
+ WHERE MENU_NO IN (2060)
+   AND NOT EXISTS (
+       SELECT 1 FROM T_AUTH_MENU
+        WHERE AUTH_CODE = 'ROLE_ADMIN' AND MENU_NO = T_MENU.MENU_NO
+   );
+
+INSERT INTO T_AUTH_MENU (AUTH_CODE, MENU_NO, READ_YN, WRITE_YN)
+SELECT 'ROLE_OPER', MENU_NO, 'Y', 'Y'
+  FROM T_MENU
+ WHERE MENU_NO IN (2060)
+   AND NOT EXISTS (
+       SELECT 1 FROM T_AUTH_MENU
+        WHERE AUTH_CODE = 'ROLE_OPER' AND MENU_NO = T_MENU.MENU_NO
+   );
+
+INSERT INTO T_AUTH_MENU (AUTH_CODE, MENU_NO, READ_YN, WRITE_YN)
+SELECT 'ROLE_MONITOR', MENU_NO, 'Y', 'N'
+  FROM T_MENU
+ WHERE MENU_NO IN (2060)
+   AND NOT EXISTS (
+       SELECT 1 FROM T_AUTH_MENU
+        WHERE AUTH_CODE = 'ROLE_MONITOR' AND MENU_NO = T_MENU.MENU_NO
+   );
+
+COMMIT;

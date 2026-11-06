@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.nh.atms.journal.mapper.AtmWriteMapper">
+
+    <!-- 등록 여부 확인 -->
+    <select id="existsByTerm" resultType="int">
+        SELECT COUNT(*)
+          FROM T_ATM
+         WHERE TERM_GROUP_ID = #{termGroupId,jdbcType=CHAR}
+           AND TERM_ID       = #{termId,jdbcType=VARCHAR}
+    </select>
+
+    <!-- 현재 등록된 수신제조일련번호 (기기교체 판정 기준, atmr select_T_ATM.recv_machine_sno) -->
+    <select id="selectRecvMachineSno" resultType="string">
+        SELECT TRIM(RECV_MACHINE_SNO)
+          FROM T_ATM
+         WHERE TERM_GROUP_ID = #{termGroupId,jdbcType=CHAR}
+           AND TERM_ID       = #{termId,jdbcType=VARCHAR}
+    </select>
+
+    <!-- 신규 기기 등록 (atmr insert_ignore_T_ATM 정합. BRANCH_CD 는 별도 후처리에서 갱신) -->
+    <insert id="insert">
+        INSERT INTO T_ATM (
+            TERM_GROUP_ID, TERM_ID, ATM_STATUS, ASSET_FLAG,
+            ENTER_DATE, ENTER_TIME, ATM_CO_CD, MODEL_CD,
+            ASSET_SNO, RECV_MACHINE_SNO, APP_VERSION,
+            STATUS_FLAG, TRAN_FLAG, RECV_ATM_IP, ATM_IP,
+            PROCESSOR_TYPE, SETTLE_DATE, REMOTE_FLAG, PROTOCOL_TYPE,
+            OWNER_CD
+        ) VALUES (
+            #{termGroupId,jdbcType=CHAR}, #{termId,jdbcType=VARCHAR},
+            #{atmStatus,jdbcType=CHAR}, #{assetFlag,jdbcType=CHAR},
+            #{enterDate,jdbcType=CHAR}, #{enterTime,jdbcType=CHAR},
+            #{atmCoCd,jdbcType=CHAR}, #{modelCd,jdbcType=CHAR},
+            #{assetSno,jdbcType=VARCHAR}, #{recvMachineSno,jdbcType=VARCHAR},
+            #{appVersion,jdbcType=VARCHAR},
+            #{statusFlag,jdbcType=CHAR}, #{tranFlag,jdbcType=CHAR},
+            #{recvAtmIp,jdbcType=CHAR}, #{atmIp,jdbcType=CHAR},
+            #{processorType,jdbcType=CHAR}, #{settleDate,jdbcType=CHAR},
+            #{remoteFlag,jdbcType=CHAR}, #{protocolType,jdbcType=CHAR},
+            #{ownerCd,jdbcType=CHAR}
+        )
+    </insert>
+
+    <!-- 개국 시 기기 기초정보 갱신 (atmr update_T_ATM 정합. BRANCH_CD/BOOTH_TYPE_CD 는 별도 후처리) -->
+    <update id="updateOnOpen">
+        UPDATE T_ATM
+           SET ATM_STATUS       = #{atmStatus,jdbcType=CHAR}
+              ,ASSET_FLAG       = #{assetFlag,jdbcType=CHAR}
+              ,ATM_CO_CD        = #{atmCoCd,jdbcType=CHAR}
+              ,MODEL_CD         = #{modelCd,jdbcType=CHAR}
+              ,RECV_ATM_IP      = #{recvAtmIp,jdbcType=CHAR}
+              ,ATM_IP           = #{atmIp,jdbcType=CHAR}
+              ,ASSET_SNO        = #{assetSno,jdbcType=VARCHAR}
+              ,RECV_MACHINE_SNO = #{recvMachineSno,jdbcType=VARCHAR}
+              ,APP_VERSION      = #{appVersion,jdbcType=VARCHAR}
+              ,STATUS_FLAG      = #{statusFlag,jdbcType=CHAR}
+              ,TRAN_FLAG        = #{tranFlag,jdbcType=CHAR}
+              ,PROCESSOR_TYPE   = #{processorType,jdbcType=CHAR}
+              ,REMOTE_FLAG      = #{remoteFlag,jdbcType=CHAR}
+              ,OWNER_CD         = #{ownerCd,jdbcType=CHAR}
+              ,PROTOCOL_TYPE    = #{protocolType,jdbcType=CHAR}
+         WHERE TERM_GROUP_ID    = #{termGroupId,jdbcType=CHAR}
+           AND TERM_ID          = #{termId,jdbcType=VARCHAR}
+    </update>
+
+    <!-- 개국 공통 후처리: 본지점코드 갱신 (atmr update_T_ATM_branchcd) -->
+    <update id="updateBranchCd">
+        UPDATE T_ATM
+           SET BRANCH_CD     = #{branchCd,jdbcType=VARCHAR}
+         WHERE TERM_GROUP_ID = #{termGroupId,jdbcType=CHAR}
+           AND TERM_ID       = #{termId,jdbcType=VARCHAR}
+    </update>
+
+    <!-- 개국 공통 후처리: 부스타입코드 갱신 (atmr update_T_ATM_boothTypeCd) -->
+    <update id="updateBoothTypeCd">
+        UPDATE T_ATM
+           SET BOOTH_TYPE_CD = #{boothTypeCd,jdbcType=CHAR}
+         WHERE TERM_GROUP_ID = #{termGroupId,jdbcType=CHAR}
+           AND TERM_ID       = #{termId,jdbcType=VARCHAR}
+    </update>
+
+</mapper>

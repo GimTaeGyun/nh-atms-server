@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.nh.atms.batch.mapper.StatMapper">
+
+    <!-- =================================================================
+         batday02 : 거래실적 집계 — AS-IS atmb batday02 논리 동등 이식
+         - 성공 거래만 집계: TRIM(TR_RESULT)='0000' (AS-IS 'OK' 와 동일 의미,
+           TO-BE 스키마 재설계에 따른 값 차이)
+         - 차원: 거래코드(TR_CD=TR_TYPE) / 자행·타행 / 마감구분(TOTAL_TYPE_CD) / 요일
+         - AS-IS 24시간 pivot 컬럼은 STAT_HOUR 행 구조로 정규화
+         - 대상 기기: AS-IS sel_t_atm 과 동일 (PROTOCOL_TYPE='T', ATM_STATUS='1')
+         ================================================================= -->
+
+    <select id="countTxSource" resultType="long">
+        SELECT COUNT(*)
+          FROM T_TRANSACTION_JOURNAL
+         WHERE JNL_DATE = #{statDate}
+    </select>
+
+    <delete id="deleteTxDailyTotal">
+        DELETE FROM T_TRANSACTION_DAILY_TOTAL
+         WHERE STAT_DATE = #{statDate}
+    </delete>
+
+    <!-- batday02 Chunk Step Reader : 집계 행 스트리밍 (MyBatisCursorItemReader).
+         재시작 시 읽은 건수만큼 건너뛰므로 ORDER BY 로 순서를 결정적으로 고정.
+         자행/타행 판정(AS-IS): 매체구분(TR_MEDIA_CD)이 공백/'2'(통장류)이면 자행으로 간주,
+         그 외에는 카드 발급은행(BANK_CD)이 자행코드와 같은지로 판정 -->
+    <select id="selectTxDailyTotalRows" resultType="kr.co.nh.atms.batch.dto.TxDailyTotalRow"
+            fetchSize="1000" resultSetType="FORWARD_ONLY">
+        SELECT
+            j.JNL_DATE                                    AS STAT_DATE,
+            j.TERM_GROUP_ID                               AS TERM_GROUP_ID,
+            a.BRANCH_CD                                   AS BRANCH_CD,
+            j.TERM_ID                                     AS TERM_ID,
+            SUBSTR(j.JNL_TIME, 1, 2)                      AS STAT_HOUR,
+            NVL(TRIM(j.TR_TYPE), ' ')                     AS TR_CD,
+            CASE WHEN (CASE WHEN NVL(j.TR_MEDIA_CD, ' ') IN (' ', '2')
+                            THEN #{bankCd} ELSE j.BANK_CD END) = #{bankCd}
+                 THEN '1' ELSE '2' END                    AS TR_BANK_TYPE,
+            NVL(j.TOTAL_TYPE_CD, ' ')                     AS CLOSING_TYPE,
+            TO_CHAR(TO_DATE(#{statDate}, 'YYYYMMDD'), 'DY',
+                    'NLS_DATE_LANGUAGE=AMERICAN')         AS DAY_WEEK,
+            COUNT(*)                                      AS TR_CNT,
+            NVL(SUM(j.DISPENSE_AMOUNT), 0)                AS TR_AMT,
+            NVL(SUM(j.SURCHARGE), 0)                      AS SURCHARGE_AMT
+          FROM T_TRANSACTION_JOURNAL j
+               INNER JOIN T_ATM a
+                       ON a.TERM_GROUP_ID = j.TERM_GROUP_ID
+                      AND a.TERM_ID       = j.TERM_ID
+         WHERE j.JNL_DATE = #{statDate}
+           AND TRIM(j.TR_RESULT) = '0000'
+           AND a.PROTOCOL_TYPE = 'T'
+           AND a.ATM_STATUS = '1'
+         GROUP BY j.JNL_DATE, j.TERM_GROUP_ID, a.BRANCH_CD, j.TERM_ID,
+                  SUBSTR(j.JNL_TIME, 1, 2),
+                  NVL(TRIM(j.TR_TYPE), ' '),
+                  CASE WHEN (CASE WHEN NVL(j.TR_MEDIA_CD, ' ') IN (' ', '2')
+                                  THEN #{bankCd} ELSE j.BANK_CD END) = #{bankCd}
+                       THEN '1' ELSE '2' END,
+                  NVL(j.TOTAL_TYPE_CD, ' ')
+         ORDER BY TERM_GROUP_ID, TERM_ID, STAT_HOUR, TR_CD, TR_BANK_TYPE, CLOSING_TYPE
+    </select>
+
+    <!-- batday02 Chunk Step Writer : 집계 1행 INSERT (MyBatisBatchItemWriter, ExecutorType.BATCH) -->
+    <insert id="insertTxDailyTotalRow" parameterType="kr.co.nh.atms.batch.dto.TxDailyTotalRow">
+        INSERT INTO T_TRANSACTION_DAILY_TOTAL
+            (STAT_DATE, TERM_GROUP_ID, BRANCH_CD, TERM_ID, STAT_HOUR,
+             TR_CD, TR_BANK_TYPE, CLOSING_TYPE, DAY_WEEK,
+             TR_CNT, TR_AMT, SURCHARGE_AMT, REG_DT)
+        VALUES
+            (#{statDate}, #{termGroupId}, #{branchCd,jdbcType=VARCHAR}, #{termId}, #{statHour},
+             #{trCd}, #{trBankType}, #{closingType}, #{dayWeek},
+             #{trCnt}, #{trAmt}, #{surchargeAmt}, CURRENT_TIMESTAMP)
+    </insert>
+
+    <!-- ============ batday30 : 사용자 부서(금고)명 동기화 ============ -->
+    <!-- MG batday30(t_user.dept_name ← t_atmgroup.term_group_name) 이식.
+         MG의 1단계(dept_cd = term_group_id 일괄 셋업)는 NH 사용자 모델에서
+         DEPT_CD 를 직접 관리하므로 제외하고, 명칭 동기화만 수행한다. -->
+
+    <select id="countUserDeptSyncTarget" resultType="long">
+        SELECT COUNT(*)
+          FROM T_USER u
+         WHERE EXISTS (
+                 SELECT 1
+                   FROM T_ATM_GROUP g
+                  WHERE g.TERM_GROUP_ID = u.DEPT_CD
+                    AND NVL(g.TERM_GROUP_NAME, ' ') &lt;&gt; NVL(u.DEPT_NAME, ' ')
+               )
+    </select>
+
+    <update id="updateUserDeptName">
+        UPDATE T_USER u
+           SET u.DEPT_NAME = (SELECT g.TERM_GROUP_NAME
+                                FROM T_ATM_GROUP g
+                               WHERE g.TERM_GROUP_ID = u.DEPT_CD)
+         WHERE EXISTS (
+                 SELECT 1
+                   FROM T_ATM_GROUP g
+                  WHERE g.TERM_GROUP_ID = u.DEPT_CD
+                    AND NVL(g.TERM_GROUP_NAME, ' ') &lt;&gt; NVL(u.DEPT_NAME, ' ')
+               )
+    </update>
+
+</mapper>

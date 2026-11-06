@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.nh.atms.file.remote.mapper.MsgAsyncMapper">
+
+    <!--
+        T_MSG_ASYNC : 비동기 원격명령 송수신 이력
+        구 새마을금고 atms.t_msg_async (MySQL) → Oracle 이식.
+        ※ Oracle 예약어 회피: 컬럼 UID → MSG_UID
+        sta: 1=송신, 2=에러, 3=수신완료
+    -->
+
+    <insert id="insert" parameterType="map">
+        <selectKey keyProperty="uid" resultType="long" order="BEFORE">
+            SELECT SEQ_T_MSG_ASYNC.NEXTVAL FROM DUAL
+        </selectKey>
+        INSERT INTO T_MSG_ASYNC (
+            MSG_UID, SND_DT, SND, STA
+        ) VALUES (
+            #{uid,jdbcType=NUMERIC},
+            TO_CHAR(SYSTIMESTAMP, 'YYYYMMDDHH24MISSFF3'),
+            #{snd,jdbcType=CLOB},
+            '1'
+        )
+    </insert>
+
+    <update id="update" parameterType="map">
+        UPDATE T_MSG_ASYNC
+           SET RCV_DT = TO_CHAR(SYSTIMESTAMP, 'YYYYMMDDHH24MISSFF3'),
+               RCV    = #{rcv,jdbcType=CLOB},
+               STA    = #{sta,jdbcType=CHAR}
+         WHERE MSG_UID = #{uid,jdbcType=NUMERIC}
+    </update>
+
+    <select id="selectRcv" parameterType="map" resultType="map">
+        SELECT STA      AS "sta",
+               RCV_DT   AS "rcv_dt",
+               RCV      AS "rcv"
+          FROM T_MSG_ASYNC
+         WHERE MSG_UID = #{uid,jdbcType=NUMERIC}
+    </select>
+
+</mapper>

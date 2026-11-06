@@ -1,0 +1,26 @@
+# =====================================================================
+# atms-journal — JEUS 배포 (서버 ajou01 :8081, 컨텍스트 '/')
+# 화면의 /api/journal/ 은 WebtoB 가, ATM 에이전트(/api/agent/·/api/journal/·레거시 .do)는 L4 가 이 서버(8081)로 보낸다
+# =====================================================================
+spring:
+  config:
+    import: classpath:jeus-common.yml
+
+logging:
+  file:
+    name: ${jeus.log-dir}/atms-journal.log
+
+if:
+  queue:
+    internal-base-url: ${jeus.url.ifin}
+    external-base-url: ${jeus.url.ifex}
+
+# 에이전트 open 응답으로 내려줄 접속 정보 → 에이전트는 L4 를 거쳐 저널은 ajou01(8081), 파일은 file01(8083) 로 직접
+agent:
+  atms:
+    host: ${jeus.agent-entry.host}
+    port: ${jeus.agent-entry.journal-port}
+    schema: ${jeus.agent-entry.schema}
+  atmf:
+    host: ${jeus.agent-entry.host}
+    port: ${jeus.agent-entry.file-port}

@@ -1,0 +1,53 @@
+server:
+  port: 8085
+
+spring:
+  application:
+    name: atms-if-external
+  profiles:
+    active: local
+    # local  → 로컬 IntelliJ 기본값 (application-local.yml 함께 로드)
+    # dev    → Docker Compose: SPRING_PROFILES_ACTIVE=dev 환경변수가 이 값을 덮어씀
+    # prod   → CI/CD 배포 시 Jenkins Credentials에서 주입
+  # Oracle 19C — atms-web 과 동일 DB 공유
+  datasource:
+    url:      ${SPRING_DATASOURCE_URL:jdbc:oracle:thin:@//192.168.28.21:1521/ATMSPDB}
+    driver-class-name: oracle.jdbc.OracleDriver
+    username: ${SPRING_DATASOURCE_USERNAME:ATMS}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 1
+      connection-timeout: 30000
+      pool-name: AtmsIfExtHikariCP
+      connection-init-sql: "ALTER SESSION SET TIME_ZONE = 'Asia/Seoul'"
+
+mybatis:
+  mapper-locations: classpath:mapper/**/*.xml
+  # entity 패키지로 한정 — 패키지 전체 스캔 시 Converter의 메서드 로컬 클래스(Converter$1Convert, $2Convert)가
+  # 동일 별칭 'Convert'로 중복 등록되어 SqlSessionFactory 생성 실패(기동 불가). mapper XML은 FQCN만 사용하므로 영향 없음.
+  type-aliases-package: kr.co.nh.atms.ifex.entity
+  configuration:
+    map-underscore-to-camel-case: true
+
+# 대외 게이트웨이 (mock: 기본 Mock / eif: 고정길이 전문 TCP 실연동 — EifExternalGateway)
+external:
+  gateway:
+    mode: mock
+    spec-location: eif/interface.external.json
+    org-cd: "045"
+    connect-timeout-ms: 3000
+    read-timeout-ms: 5000
+    vendors: {}    # 예) "11": { ip: 10.0.0.1, port: 9001 }  (업체코드별 송신 엔드포인트)
+
+jwt:
+  secret: ${JWT_SECRET}
+  access-token-validity: 3600000
+  refresh-token-validity: 86400000
+
+logging:
+  level:
+    kr.co.nh.atms: DEBUG
+
+sso:
+  provider: mock

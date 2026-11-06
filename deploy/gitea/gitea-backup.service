@@ -1,0 +1,12 @@
+# Gitea 백업 (gitea dump) — gitea-backup.timer 가 매일 실행
+#  위치: ~/.config/systemd/user/gitea-backup.service
+#  결과: ~/atms/backup/gitea/gitea-dump-YYYYMMDD.tar.gz (7일 보관, atmswas 소유)
+#  2026-11-04 변경: 예전에는 Gitea 데이터 폴더 안(data/backup)에 만들어서, 다음 dump 가 이전 dump 들을
+#   통째로 다시 담아 매일 크기가 불어났다 (T65, /home/atmswas 100%). 지금은 표준출력(-f -)으로 받아
+#   데이터 폴더 밖에 저장한다. 다 받은 뒤에만 이름을 바꾸므로 실패하면 dump.part 만 남는다 (다음 실행이 덮어씀)
+[Unit]
+Description=ATMS Gitea daily dump
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c 'mkdir -p %h/atms/backup/gitea && /usr/bin/podman exec atms-gitea gitea dump --skip-log --type tar.gz -f - > %h/atms/backup/gitea/dump.part && mv %h/atms/backup/gitea/dump.part %h/atms/backup/gitea/gitea-dump-$(date +%%Y%%m%%d).tar.gz && find %h/atms/backup/gitea -name "gitea-dump-*.tar.gz" -mtime +6 -delete'

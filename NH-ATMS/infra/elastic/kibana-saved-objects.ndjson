@@ -1,0 +1,1 @@
+{"attributes":{"name":"ATMS Journal","title":"atms-journal-*","timeFieldName":"receivedAt","fieldAttrs":"{}","fields":"[]","sourceFilters":"[]","typeMeta":"{}"},"coreMigrationVersion":"8.8.0","id":"atms-journal","managed":false,"type":"index-pattern","typeMigrationVersion":"8.0.0","version":"1"}
